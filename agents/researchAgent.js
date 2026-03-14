@@ -10,7 +10,7 @@ import { log }         from '../shared/logger.js';
 import { safeJson, uuid, now } from '../shared/utils.js';
 import { bus, Events } from '../shared/events.js';
 
-const SYSTEM = `You are a research synthesizer. Given search results and context, 
+const SYSTEM = `You are a research synthesizer. Given search results and context,
 produce a comprehensive, accurate, well-cited answer. Be concise but complete.`;
 
 export async function run(input, options = {}) {
@@ -28,27 +28,35 @@ export async function run(input, options = {}) {
   // 2. If web enabled, plan extra targeted queries
   let extraContext = '';
   if (useWeb && process.env.TAVILY_API_KEY) {
-    const model = await getModel(options.model || 'openai');
-    const planPrompt = `Generate 2 targeted search queries to research: "${query}"\nReturn JSON array of strings only.`;
-    const planRes    = await model.complete(planPrompt, { temperature: 0.3 });
-    const queries    = safeJson(planRes.text) || [query];
+    try {
+      const model = await getModel(options.model || 'openai');
+      const planPrompt = `Generate 2 targeted search queries to research: "${query}"\nReturn JSON array of strings only.`;
+      const planRes    = await model.complete(planPrompt, { temperature: 0.3 });
+      const queries    = safeJson(planRes.text) || [query];
 
-    const results = await Promise.allSettled(
-      queries.slice(0, 2).map(q => webSearch(q, { maxResults: 3 }))
-    );
-    const webSnippets = results
-      .filter(r => r.status === 'fulfilled')
-      .flatMap(r => r.value.results?.map(x => `[${x.title}] ${x.content}`) || []);
-    extraContext = webSnippets.join('\n\n').slice(0, 4000);
+      const results = await Promise.allSettled(
+        queries.slice(0, 2).map(q => webSearch(q, { maxResults: 3 }))
+      );
+      const webSnippets = results
+        .filter(r => r.status === 'fulfilled')
+        .flatMap(r => r.value.results?.map(x => `[${x.title}] ${x.content}`) || []);
+      extraContext = webSnippets.join('\n\n').slice(0, 4000);
+    } catch {}
   }
 
   // 3. Synthesize
-  const model  = await getModel(options.model || 'openai');
   const prompt = retrieval.hasContext || extraContext
     ? `${retrieval.augmentedPrompt}\n\n${extraContext ? 'Additional web context:\n' + extraContext : ''}`
     : query;
 
-  const response = await model.complete(prompt, { system: SYSTEM, temperature: 0.5 });
+  let response = { text: '', model: options.model || 'heuristic', usage: null };
+  try {
+    const model = await getModel(options.model || 'openai');
+    response = await model.complete(prompt, { system: SYSTEM, temperature: 0.5 });
+  } catch {
+    const fallback = retrieval.contextText || extraContext || 'No external context available.';
+    response.text = `Research summary for: ${query}\n\n${fallback.slice(0, 3000)}`;
+  }
 
   // 4. Store result in memory
   await remember(response.text, { source: 'research', query, agentId }).catch(() => {});

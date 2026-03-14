@@ -37,6 +37,7 @@ import { initMemoryManager }   from '../kernel/memoryManager.js';
 import { spawnAgent, getAgentStatus, listAgents, cancelAgent, getSchedulerStats } from '../kernel/agentScheduler.js';
 import { plan }                from '../kernel/planner.js';
 import { executePlan }         from '../kernel/executor.js';
+import { buildTaskGraph, executeTaskGraph } from '../kernel/taskGraphEngine.js';
 
 // Queue
 import { enqueue, getTask, cancelTask, listTasks, getQueueStats, startWorker } from '../queue/taskQueue.js';
@@ -90,6 +91,19 @@ app.get('/api/health', (_req, res) => ok(res, {
   timestamp: new Date().toISOString(),
   uptime:    process.uptime(),
 }));
+
+// ── Super-Agent: task graph autonomous execution ───────────
+app.post('/api/super/run', async (req, res) => {
+  const { goal, constraints = {}, stopOnError = false } = req.body;
+  if (!goal) return fail(res, 'goal is required');
+  try {
+    const graph = buildTaskGraph(goal, { constraints });
+    const execution = await executeTaskGraph(graph, { constraints, stopOnError });
+    ok(res, { graph, execution });
+  } catch (err) {
+    fail(res, err.message, 500);
+  }
+});
 
 // ── Goal: plan + execute ──────────────────────────────────
 app.post('/api/run', async (req, res) => {
