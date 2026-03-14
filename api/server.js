@@ -327,8 +327,6 @@ async function boot() {
       'GET  /api/tasks         — List queue tasks',
       'GET  /api/memory/search?q= — Semantic search',
       'POST /api/memory        — Store memory',
-      'POST /api/vector/ingest — Ingest multimodal item',
-      'GET  /api/vector/search?q= — Search multimodal vectors',
       'GET  /api/tools         — List tools',
       'POST /api/tools/:name   — Execute a tool',
       'GET  /api/metrics       — System metrics',
