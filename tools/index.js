@@ -51,7 +51,7 @@ export function getTool(name) { return _tools.get(name) || null; }
 
 // Auto-load all tools
 export async function loadAllTools() {
-  const modules = ['./webSearch.js', './codeExecutor.js', './fileSystem.js', './apiCaller.js'];
+  const modules = ['./webSearch.js', './codeExecutor.js', './fileSystem.js', './apiCaller.js', './githubCrawler.js', './browserAutomation.js'];
   for (const mod of modules) {
     try { await import(mod); }
     catch (err) { log.warn(`Failed to load tool module ${mod}: ${err.message}`); }

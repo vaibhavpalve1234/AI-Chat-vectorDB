@@ -143,6 +143,11 @@ async function resolveHandler(type) {
     coding:     () => import('../agents/codingAgent.js').then(m => m.run),
     evaluation: () => import('../agents/evaluationAgent.js').then(m => m.run),
     tool:       () => import('../agents/toolAgent.js').then(m => m.run),
+    planner:    () => import('../agents/plannerAgent.js').then(m => m.run),
+    data:       () => import('../agents/dataAgent.js').then(m => m.run),
+    security:   () => import('../agents/securityAgent.js').then(m => m.run),
+    critic:     () => import('../agents/criticAgent.js').then(m => m.run),
+    super:      () => import('../agents/superAgent.js').then(m => m.run),
   };
   const loader = map[type];
   if (!loader) throw new Error(`Unknown agent type: "${type}"`);
