@@ -304,6 +304,7 @@ tr:hover td { background: rgba(0,212,255,.03); }
     <div class="status-pill"><div class="dot dot-green"></div><span id="s-agents">0 agents</span></div>
     <div class="status-pill"><div class="dot dot-yellow"></div><span id="s-queue">0 queued</span></div>
     <div class="status-pill"><div class="dot dot-gray"></div><span id="s-cache">cache 0%</span></div>
+    <div class="status-pill"><div class="dot dot-gray" id="s-model-dot"></div><span id="s-model">models…</span></div>
     <div id="ws-status">⬤ connecting…</div>
     <button class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="refreshAll()">⟳ Refresh</button>
   </div>
@@ -1362,6 +1363,7 @@ function buildApiExplorer() {
   const endpoints = [
     ['GET',    '/api/health', null, 'Health'],
     ['GET',    '/api/metrics', null, 'Metrics'],
+    ['GET',    '/api/models', null, 'Models'],
     ['GET',    '/api/agents', null, 'List Agents'],
     ['GET',    '/api/tasks', null, 'List Tasks'],
     ['GET',    '/api/tools', null, 'List Tools'],
@@ -1435,12 +1437,90 @@ function refreshAll() {
   if (document.getElementById('panel-metrics').classList.contains('active')) loadMetrics();
 }
 
+// ── Models ────────────────────────────────────────────────
+let _modelAvailability = {};
+const MODEL_LABELS = {
+  openai:       'GPT-4o',
+  claude:       'Claude',
+  ollama:       'Ollama',
+  huggingface:  'HuggingFace',
+};
+
+async function loadModels() {
+  const res = await api('GET', '/api/models').catch(() => null);
+  if (!res?.availability) return;
+
+  _modelAvailability = res.availability;
+  const available = res.available || [];
+  const defaultModel = res.default;
+
+  // Build option HTML — show ✔/✕ + reason on unavailable ones
+  function buildOptions(selectId, includeHF = false) {
+    const sel = document.getElementById(selectId);
+    if (!sel) return;
+    const models = includeHF
+      ? ['openai', 'claude', 'ollama', 'huggingface']
+      : ['openai', 'claude', 'ollama'];
+
+    sel.innerHTML = models.map(m => {
+      const info   = res.availability[m] || {};
+      const ok     = info.available;
+      const label  = MODEL_LABELS[m];
+      const detail = ok ? (info.detail || '') : (info.reason || 'unavailable');
+      const suffix = ok ? '' : ' ✕';
+      const title  = ok ? detail : `Unavailable: ${detail}`;
+      return `<option value="${m}" ${!ok ? 'disabled' : ''} title="${title}">${label}${suffix}</option>`;
+    }).join('');
+
+    // Select default or first available
+    const preferred = available.includes(defaultModel) ? defaultModel : available[0];
+    if (preferred) sel.value = preferred;
+  }
+
+  buildOptions('quick-model',  false);
+  buildOptions('run-model',    true);
+  buildOptions('agent-model',  false);
+
+  // Update topbar model status pill
+  const modelPill = document.getElementById('s-model');
+  const modelDot  = document.getElementById('s-model-dot');
+  if (modelPill) {
+    modelPill.textContent = available.length
+      ? `${available.length} model${available.length > 1 ? 's' : ''}`
+      : '⚠ no models';
+  }
+  if (modelDot) {
+    modelDot.className = available.length ? 'dot dot-green' : 'dot dot-red';
+  }
+
+  // Show warning banner if no models
+  if (!available.length) {
+    const banner = document.createElement('div');
+    banner.style.cssText = 'background:rgba(255,71,87,.1);border:1px solid rgba(255,71,87,.3);border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--red);';
+    banner.innerHTML = `
+      <strong>⚠ No AI models available</strong><br>
+      Add at least one API key to your <code>.env</code> file:<br>
+      <code style="color:var(--yellow)">OPENAI_API_KEY=sk-...</code> or
+      <code style="color:var(--yellow)">ANTHROPIC_API_KEY=sk-ant-...</code><br>
+      Or run Ollama: <code style="color:var(--yellow)">ollama serve && ollama pull llama3.2</code>
+    `;
+    const dashPanel = document.querySelector('#panel-dashboard .scroll-area');
+    if (dashPanel && !document.getElementById('no-model-banner')) {
+      banner.id = 'no-model-banner';
+      dashPanel.insertBefore(banner, dashPanel.firstChild);
+    }
+  } else {
+    document.getElementById('no-model-banner')?.remove();
+  }
+}
+
 // ── Boot ──────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   connectWS();
   initCharts();
   loadDashboardStats();
   loadKgStats();
+  loadModels();   // ← probe + populate model selectors
 
   // Auto-refresh dashboard every 10s
   setInterval(() => {
