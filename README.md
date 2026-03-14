@@ -102,7 +102,7 @@ npm install
 ### 2️⃣ Configure environment
 
 ```bash
-cp config/.env.example .env
+cp .env.example .env
 ```
 
 Fill in your API keys.
@@ -136,6 +136,13 @@ Run:
 ```bash
 chroma run --path ./data/chromadb
 ```
+
+Quick check:
+
+- `GET /api/memory/stats` should show `vectorDB.ready: true`.
+- By default, embeddings use `EMBEDDINGS_PROVIDER=openai`.
+- If inserts fail with OpenAI quota/billing errors (HTTP 429), set `EMBEDDINGS_PROVIDER=ollama` and optionally `OLLAMA_EMBED_MODEL=nomic-embed-text` in `.env`.
+- You can also run Chroma with Docker: `docker compose up -d chroma`.
 
 ---
 
@@ -200,6 +207,24 @@ Semantic vector search:
 
 ```bash
 curl "http://localhost:3000/api/memory/search?q=machine+learning&topK=5"
+```
+
+Store a memory entry:
+
+```bash
+curl -X POST "http://localhost:3000/api/memory" \
+  -H "Content-Type: application/json" \
+  -d '{"content":"My favorite color is teal.","metadata":{"source":"manual-test"}}'
+```
+
+The response includes a `vector` status object (ready/attempted/saved/error) so you can tell if it actually wrote to the vector DB.
+
+Strict mode (fail the request if vector insert fails):
+
+```bash
+curl -X POST "http://localhost:3000/api/memory?strict=true" \
+  -H "Content-Type: application/json" \
+  -d '{"content":"This must be stored in vectors.","metadata":{"source":"manual-test"}}'
 ```
 
 ---
@@ -461,7 +486,7 @@ npm install
 ### 3️⃣ Configure environment
 
 ```bash id="dev3"
-cp config/.env.example .env
+cp .env.example .env
 ```
 
 Fill in keys if needed.

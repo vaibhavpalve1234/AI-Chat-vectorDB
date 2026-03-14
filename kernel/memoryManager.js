@@ -67,18 +67,34 @@ export async function recall(query, options = {}) {
   return { hit: false };
 }
 
-/** Store a new memory entry across backends. */
-export async function remember(content, metadata = {}) {
+/**
+ * Store a new memory entry across backends, returning per-backend status.
+ * This makes vector insert failures observable without forcing callers to fail.
+ */
+export async function rememberWithStatus(content, metadata = {}) {
   const id  = uuid();
   const doc = { id, text: content, metadata: { ...metadata, timestamp: now() } };
 
-  const saves = [];
+  const vector = { ready: false, attempted: false, saved: false, error: null };
+  const saves = []; // non-fatal saves (e.g. KG), awaited best-effort
 
   if (_vectorDB) {
-    saves.push(
-      _vectorDB.addDocument('KNOWLEDGE', doc)
-        .catch(err => log.warn('Vector save failed', err.message))
-    );
+    const ready = typeof _vectorDB.isReady === 'function' ? _vectorDB.isReady() : false;
+    vector.ready = ready;
+    if (!ready) {
+      vector.error = `VectorDB not ready. Start ChromaDB at ${Config.memory.chromaUrl}`;
+    } else {
+      vector.attempted = true;
+      try {
+        await _vectorDB.addDocument('KNOWLEDGE', doc);
+        vector.saved = true;
+      } catch (err) {
+        vector.error = err?.message || String(err);
+        log.warn('Vector save failed', vector.error);
+      }
+    }
+  } else {
+    vector.error = 'VectorDB not initialized';
   }
 
   if (_kgraph && metadata.entities) {
@@ -91,6 +107,12 @@ export async function remember(content, metadata = {}) {
   await Promise.allSettled(saves);
   bus.emit(Events.MEMORY_SAVED, { id, content: content.slice(0, 100) });
   log.memory(`Stored memory: id=${id.slice(0, 8)}`);
+  return { id, vector };
+}
+
+/** Store a new memory entry across backends. */
+export async function remember(content, metadata = {}) {
+  const { id } = await rememberWithStatus(content, metadata);
   return id;
 }
 

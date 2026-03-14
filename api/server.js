@@ -17,7 +17,6 @@
 //    GET  /api/health       — Health check
 //    WS   /ws               — Real-time event stream
 // ============================================================
-import 'dotenv/config';
 import express       from 'express';
 import { WebSocketServer } from 'ws';
 import { createServer }    from 'http';
@@ -43,7 +42,7 @@ import { buildTaskGraph, executeTaskGraph } from '../kernel/taskGraphEngine.js';
 import { enqueue, getTask, cancelTask, listTasks, getQueueStats, startWorker } from '../queue/taskQueue.js';
 
 // Memory
-import { recall, remember, search, getMemoryStats } from '../kernel/memoryManager.js';
+import { recall, rememberWithStatus, search, getMemoryStats } from '../kernel/memoryManager.js';
 import { ingestMultimodalItem, ingestMultimodalBatch, searchMultimodal, listModalities } from '../rag/multimodalIndexer.js';
 
 // Tools
@@ -180,10 +179,16 @@ app.get('/api/memory/search', async (req, res) => {
 
 app.post('/api/memory', async (req, res) => {
   const { content, metadata } = req.body;
+  const strict = String(req.query.strict || '').toLowerCase();
+  const strictMode = strict === 'true' || strict === '1' || strict === 'yes';
   if (!content) return fail(res, 'content is required');
   try {
-    const id = await remember(content, metadata);
-    ok(res, { id });
+    const { id, vector } = await rememberWithStatus(content, metadata);
+    if (strictMode && (!vector.ready || !vector.saved)) {
+      const code = vector.ready ? 502 : 503;
+      return res.status(code).json({ ok: false, error: vector.error || 'Vector insert failed', vector });
+    }
+    ok(res, { id, vector });
   } catch (err) { fail(res, err.message, 500); }
 });
 

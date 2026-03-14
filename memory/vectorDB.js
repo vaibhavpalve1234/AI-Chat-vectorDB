@@ -45,7 +45,7 @@ export async function initVectorDB() {
 export function isReady() { return _ready; }
 
 async function embed(text) {
-  const model = await getModel('openai');
+  const model = await getModel(Config.models.embeddingsProvider || 'openai');
   return model.embed(Array.isArray(text) ? text : [text]).then(r => Array.isArray(r[0]) ? r : [r]);
 }
 
@@ -60,7 +60,10 @@ export async function addDocument(collection, doc) {
       documents:  [doc.text],
       metadatas:  [{ ...doc.metadata, ts: new Date().toISOString() }],
     });
-  } catch (err) { log.warn(`VectorDB add failed [${collection}]`, err.message); }
+  } catch (err) {
+    log.warn(`VectorDB add failed [${collection}]`, err.message);
+    throw err;
+  }
 }
 
 export async function addDocuments(collection, docs) {
@@ -75,7 +78,10 @@ export async function addDocuments(collection, docs) {
       documents:  texts,
       metadatas:  docs.map(d => ({ ...d.metadata, ts: new Date().toISOString() })),
     });
-  } catch (err) { log.warn('VectorDB batch add failed', err.message); }
+  } catch (err) {
+    log.warn('VectorDB batch add failed', err.message);
+    throw err;
+  }
 }
 
 export async function semanticSearch(collection, query, topK = 5, filter = null) {

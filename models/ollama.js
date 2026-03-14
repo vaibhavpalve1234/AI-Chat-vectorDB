@@ -51,7 +51,26 @@ export const OllamaAdapter = {
   },
 
   async embed(input) {
-    const { OpenAIAdapter } = await import('./openai.js');
-    return OpenAIAdapter.embed(input);
+    const isArr = Array.isArray(input);
+    const texts = isArr ? input : [input];
+
+    // Ollama embeddings endpoint expects a single prompt per request.
+    // Use OLLAMA_EMBED_MODEL if provided; otherwise reuse the chat model name.
+    const model = Config.models.ollamaEmbed || Config.models.ollama;
+    const url   = `${Config.models.ollamaUrl}/api/embeddings`;
+
+    const vecs = [];
+    for (const prompt of texts) {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model, prompt }),
+      });
+      if (!res.ok) throw new Error(`Ollama embeddings HTTP ${res.status}: ${await res.text()}`);
+      const data = await res.json();
+      vecs.push(data.embedding);
+    }
+
+    return isArr ? vecs : vecs[0];
   },
 };
