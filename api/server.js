@@ -37,12 +37,14 @@ import { initMemoryManager }   from '../kernel/memoryManager.js';
 import { spawnAgent, getAgentStatus, listAgents, cancelAgent, getSchedulerStats } from '../kernel/agentScheduler.js';
 import { plan }                from '../kernel/planner.js';
 import { executePlan }         from '../kernel/executor.js';
+import { buildTaskGraph, executeTaskGraph } from '../kernel/taskGraphEngine.js';
 
 // Queue
 import { enqueue, getTask, cancelTask, listTasks, getQueueStats, startWorker } from '../queue/taskQueue.js';
 
 // Memory
 import { recall, remember, search, getMemoryStats } from '../kernel/memoryManager.js';
+import { ingestMultimodalItem, ingestMultimodalBatch, searchMultimodal, listModalities } from '../rag/multimodalIndexer.js';
 
 // Tools
 import { listTools, executeTool, loadAllTools } from '../tools/index.js';
@@ -90,6 +92,19 @@ app.get('/api/health', (_req, res) => ok(res, {
   timestamp: new Date().toISOString(),
   uptime:    process.uptime(),
 }));
+
+// ── Super-Agent: task graph autonomous execution ───────────
+app.post('/api/super/run', async (req, res) => {
+  const { goal, constraints = {}, stopOnError = false } = req.body;
+  if (!goal) return fail(res, 'goal is required');
+  try {
+    const graph = buildTaskGraph(goal, { constraints });
+    const execution = await executeTaskGraph(graph, { constraints, stopOnError });
+    ok(res, { graph, execution });
+  } catch (err) {
+    fail(res, err.message, 500);
+  }
+});
 
 // ── Goal: plan + execute ──────────────────────────────────
 app.post('/api/run', async (req, res) => {
@@ -175,6 +190,49 @@ app.post('/api/memory', async (req, res) => {
 app.get('/api/memory/stats', async (_req, res) => {
   try { ok(res, await getMemoryStats()); }
   catch (err) { fail(res, err.message, 500); }
+});
+
+
+// ── Vector DB Multimodal ─────────────────────────────────
+app.get('/api/vector/modalities', (_req, res) => {
+  ok(res, { modalities: listModalities() });
+});
+
+app.post('/api/vector/ingest', async (req, res) => {
+  const { item, collection, chunkSize, overlap } = req.body;
+  if (!item) return fail(res, 'item is required');
+  try {
+    const result = await ingestMultimodalItem(item, { collection, chunkSize, overlap });
+    ok(res, result);
+  } catch (err) { fail(res, err.message, 500); }
+});
+
+app.post('/api/vector/ingest/batch', async (req, res) => {
+  const { items = [], collection, chunkSize, overlap } = req.body;
+  if (!Array.isArray(items) || !items.length) return fail(res, 'items[] is required');
+  try {
+    const result = await ingestMultimodalBatch(items, { collection, chunkSize, overlap });
+    ok(res, result);
+  } catch (err) { fail(res, err.message, 500); }
+});
+
+app.get('/api/vector/search', async (req, res) => {
+  const { q, topK = 8, collection = 'MEDIA', types = '' } = req.query;
+  if (!q) return fail(res, 'q is required');
+
+  const parsedTypes = String(types || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  try {
+    const result = await searchMultimodal(String(q), {
+      topK: parseInt(topK),
+      collection: String(collection),
+      types: parsedTypes,
+    });
+    ok(res, result);
+  } catch (err) { fail(res, err.message, 500); }
 });
 
 // ── Tools ─────────────────────────────────────────────────
@@ -269,6 +327,8 @@ async function boot() {
       'GET  /api/tasks         — List queue tasks',
       'GET  /api/memory/search?q= — Semantic search',
       'POST /api/memory        — Store memory',
+      'POST /api/vector/ingest — Ingest multimodal item',
+      'GET  /api/vector/search?q= — Search multimodal vectors',
       'GET  /api/tools         — List tools',
       'POST /api/tools/:name   — Execute a tool',
       'GET  /api/metrics       — System metrics',
