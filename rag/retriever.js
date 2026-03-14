@@ -1,0 +1,1 @@
+// Smart retrieval: vector → KG → web
