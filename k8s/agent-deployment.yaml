@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-platform-agent
+  namespace: ai-platform
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ai-platform-agent
+  template:
+    metadata:
+      labels:
+        app: ai-platform-agent
+    spec:
+      containers:
+        - name: ai-platform-agent
+          image: ai-platform-agent:latest
+          ports:
+            - containerPort: 8000
+          env:
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            - name: OLLAMA_HOST
+              value: "http://ollama-service:11434"

@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  app:
+    image: ollama/ollama:latest
+    container_name: ollama_model
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_MODEL=your-model-name
+
+  volumes:
+    ollama_data:
+    build: .
+    ai_platform_agent:
+      build: .
+      container_name: ai_platform_agent
+      ports:
+        - "8000:8000"
+      volumes:
+        - .:/app
+      environment:
+        - PYTHONUNBUFFERED=1
+      networks:
+        - proxy_net
+        - /C:/Users/VAIBHAV/OneDrive/Desktop/AI-Platform-Agent:/app
+
+    networks:
+      proxy_net:
+        driver: bridge
+    container_name: ai_platform_agent
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    environment:
+      - PYTHONUNBUFFERED=1

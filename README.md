@@ -328,3 +328,326 @@ AI-OS aims to become a **general-purpose runtime for autonomous AI systems**, en
 * coding assistants
 * automation platforms
 * autonomous software systems
+# 🤖 AI-OS
+
+### Autonomous AI Operating System
+
+[![Build](https://img.shields.io/github/actions/workflow/status/YOUR_USERNAME/ai-os/ci.yml?style=for-the-badge)](https://github.com/YOUR_USERNAME/ai-os/actions)
+[![License](https://img.shields.io/github/license/YOUR_USERNAME/ai-os?style=for-the-badge)](LICENSE)
+[![Stars](https://img.shields.io/github/stars/YOUR_USERNAME/ai-os?style=for-the-badge)](https://github.com/YOUR_USERNAME/ai-os/stargazers)
+[![Issues](https://img.shields.io/github/issues/YOUR_USERNAME/ai-os?style=for-the-badge)](https://github.com/YOUR_USERNAME/ai-os/issues)
+[![Node](https://img.shields.io/badge/node-%3E%3D18-brightgreen?style=for-the-badge)](https://nodejs.org)
+
+AI-OS is a **multi-agent runtime platform** designed for autonomous AI workflows.
+
+It provides:
+
+* 🧠 Autonomous planning
+* 🔌 Tool execution
+* 🗂 Vector memory
+* 📊 Analytics
+* ⚡ Background tasks
+* 🌐 REST + WebSocket APIs
+
+---
+
+# 📊 High-Level Architecture
+
+```id="arch1"
+                ┌───────────────┐
+                │    Client     │
+                │ CLI / API / UI│
+                └───────┬───────┘
+                        │
+                        ▼
+                ┌───────────────┐
+                │   API Server  │
+                │ Express + WS  │
+                └───────┬───────┘
+                        │
+        ┌───────────────┼─────────────────┐
+        ▼               ▼                 ▼
+ ┌─────────────┐ ┌──────────────┐ ┌──────────────┐
+ │ Agent Kernel│ │   Task Queue │ │ Event Stream │
+ │ Scheduler   │ │ Retry + Pri. │ │ WebSockets   │
+ └──────┬──────┘ └──────┬───────┘ └──────┬───────┘
+        │               │                │
+        ▼               ▼                ▼
+ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
+ │   Agents    │ │    Tools    │ │   Memory    │
+ │ research    │ │ web search  │ │ vector DB   │
+ │ coding      │ │ code exec   │ │ KG store    │
+ │ evaluation  │ │ filesystem  │ │ datasets    │
+ └─────────────┘ └─────────────┘ └─────────────┘
+```
+
+---
+
+# 🧠 Execution Flow
+
+```id="arch2"
+User Goal
+   │
+   ▼
+Planner
+   │
+   ▼
+Execution Plan
+   │
+   ▼
+Executor
+   │
+   ├── Call Tools
+   ├── Query Memory
+   ├── Spawn Agents
+   │
+   ▼
+Results
+   │
+   ▼
+Evaluation Agent
+   │
+   ▼
+Memory Storage
+```
+
+# ⚙️ Developer Setup
+
+### 1️⃣ Clone repository
+
+```bash id="dev1"
+git clone https://github.com/YOUR_USERNAME/ai-os.git
+cd ai-os
+```
+
+---
+
+### 2️⃣ Install dependencies
+
+```bash id="dev2"
+npm install
+```
+
+---
+
+### 3️⃣ Configure environment
+
+```bash id="dev3"
+cp config/.env.example .env
+```
+
+Fill in keys if needed.
+
+---
+
+### 4️⃣ Start the server
+
+```bash id="dev4"
+npm start
+```
+
+Server:
+
+```
+http://localhost:3000
+```
+
+---
+
+# 🧠 Developer Documentation
+
+## Agent Lifecycle
+
+```id="devflow"
+spawnAgent()
+   │
+   ▼
+planner.createPlan()
+   │
+   ▼
+executor.execute()
+   │
+   ▼
+tool calls / memory
+   │
+   ▼
+evaluationAgent.score()
+   │
+   ▼
+memoryManager.save()
+```
+
+---
+
+## Register a New Tool
+
+```javascript
+const { registerTool } = require("./tools");
+
+registerTool("weather", async ({ city }) => {
+  const data = await fetchWeather(city);
+  return data;
+});
+```
+
+---
+
+## Create a New Agent
+
+```javascript
+class CustomAgent {
+  async execute(input) {
+    const result = await someTool(input);
+    return result;
+  }
+}
+
+module.exports = new CustomAgent();
+```
+
+---
+
+# 🚀 Deployment
+
+## Docker Deployment
+
+### Dockerfile
+
+```dockerfile
+FROM node:20
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm install
+
+COPY . .
+
+EXPOSE 3000
+
+CMD ["npm", "start"]
+```
+
+---
+
+### Build Image
+
+```bash id="docker1"
+docker build -t ai-os .
+```
+
+---
+
+### Run Container
+
+```bash id="docker2"
+docker run -p 3000:3000 ai-os
+```
+
+---
+
+# ☸ Kubernetes Deployment
+
+### Deployment
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-os
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ai-os
+  template:
+    metadata:
+      labels:
+        app: ai-os
+    spec:
+      containers:
+        - name: ai-os
+          image: ai-os:latest
+          ports:
+            - containerPort: 3000
+```
+
+---
+
+### Service
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-os-service
+spec:
+  selector:
+    app: ai-os
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 3000
+  type: LoadBalancer
+```
+
+---
+
+### Deploy
+
+```bash id="kube1"
+kubectl apply -f deployment.yaml
+kubectl apply -f service.yaml
+```
+
+---
+
+# 📊 Metrics Endpoint
+
+```bash id="metrics"
+curl http://localhost:3000/api/metrics
+```
+
+Returns:
+
+```
+task_count
+agent_runtime
+memory_usage
+tool_calls
+```
+
+---
+
+# 🔑 Environment Variables
+
+| Variable          | Required |
+| ----------------- | -------- |
+| OPENAI_API_KEY    | optional |
+| ANTHROPIC_API_KEY | optional |
+| TAVILY_API_KEY    | optional |
+| HF_API_KEY        | optional |
+
+---
+
+# 🛣 Roadmap
+
+Future goals:
+
+* distributed agent clusters
+* reinforcement learning feedback
+* autonomous tool discovery
+* web dashboard UI
+* plugin ecosystem
+
+---
+
+# 📜 License
+
+MIT License
+
+---
+
+# 🌟 Vision
+
+AI-OS aims to become a **runtime platform for autonomous AI systems**, enabling developers to build intelligent software capable of planning, reasoning, and executing tasks independently.
