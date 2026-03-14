@@ -21,7 +21,12 @@ import 'dotenv/config';
 import express       from 'express';
 import { WebSocketServer } from 'ws';
 import { createServer }    from 'http';
+import { readFileSync }    from 'fs';
+import { fileURLToPath }   from 'url';
+import path                from 'path';
 import chalk         from 'chalk';
+
+const __dir = path.dirname(fileURLToPath(import.meta.url));
 
 import { Config }    from '../config/index.js';
 import { log }       from '../shared/logger.js';
@@ -56,6 +61,14 @@ app.use((_req, res, next) => {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
   if (_req.method === 'OPTIONS') return res.sendStatus(204);
   next();
+});
+
+// ─── Serve dashboard ──────────────────────────────────────
+app.get('/', (_req, res) => {
+  res.sendFile(path.resolve(__dir, '../dashboard/index.html'));
+});
+app.get('/dashboard', (_req, res) => {
+  res.sendFile(path.resolve(__dir, '../dashboard/index.html'));
 });
 
 // Request logger
@@ -244,8 +257,9 @@ async function boot() {
 
   // 5. Start HTTP server
   server.listen(Config.api.port, Config.api.host, () => {
-    console.log(chalk.bold.green(`\n  ✔ AI-OS API running at http://${Config.api.host}:${Config.api.port}`));
-    console.log(chalk.gray(`  ✔ WebSocket stream at  ws://${Config.api.host}:${Config.api.port}/ws`));
+    console.log(chalk.bold.green(`\n  ✔ AI-OS running at       http://${Config.api.host}:${Config.api.port}`));
+    console.log(chalk.bold.cyan( `  ✔ Dashboard at           http://localhost:${Config.api.port}`));
+    console.log(chalk.gray(      `  ✔ WebSocket stream at    ws://${Config.api.host}:${Config.api.port}/ws`));
     console.log(chalk.cyan('\n  Endpoints:'));
     [
       'POST /api/run           — Plan + execute a goal',
