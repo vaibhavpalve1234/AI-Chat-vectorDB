@@ -204,6 +204,34 @@ curl "http://localhost:3000/api/memory/search?q=machine+learning&topK=5"
 
 ---
 
+
+## Multimodal Vector DB
+
+Ingest and search **text, documents, images, videos, and GIF metadata/transcripts** into vector memory.
+
+### Ingest one item
+
+```bash
+curl -X POST http://localhost:3000/api/vector/ingest \
+-H "Content-Type: application/json" \
+-d '{
+  "item": {
+    "modality": "image",
+    "fileName": "chart.png",
+    "caption": "Revenue chart for Q1",
+    "tags": ["finance", "revenue"]
+  }
+}'
+```
+
+### Search multimodal memory
+
+```bash
+curl "http://localhost:3000/api/vector/search?q=revenue+chart&types=image,document&topK=5"
+```
+
+---
+
 # 🔧 Tool Execution
 
 ### Web Search

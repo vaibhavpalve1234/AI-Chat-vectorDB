@@ -12,6 +12,8 @@ const COLLECTIONS = {
   CACHE:      'aios_cache',
   EVALS:      'aios_evals',
   DATASETS:   'aios_datasets',
+  DOCUMENTS:  'aios_documents',
+  MEDIA:      'aios_media',
 };
 
 let _client  = null;
@@ -50,8 +52,9 @@ async function embed(text) {
 export async function addDocument(collection, doc) {
   if (!_ready) return;
   try {
+    const colKey = resolveCollection(collection);
     const [embedding] = await embed(doc.text);
-    await _cols[collection].add({
+    await _cols[colKey].add({
       ids:        [doc.id],
       embeddings: [embedding],
       documents:  [doc.text],
@@ -63,9 +66,10 @@ export async function addDocument(collection, doc) {
 export async function addDocuments(collection, docs) {
   if (!_ready || !docs.length) return;
   try {
+    const colKey = resolveCollection(collection);
     const texts = docs.map(d => d.text);
     const embeddings = await embed(texts).then(r => r);
-    await _cols[collection].add({
+    await _cols[colKey].add({
       ids:        docs.map(d => d.id),
       embeddings,
       documents:  texts,
@@ -77,7 +81,7 @@ export async function addDocuments(collection, docs) {
 export async function semanticSearch(collection, query, topK = 5, filter = null) {
   if (!_ready) return { available: false, results: [] };
   try {
-    const col = _cols[collection];
+    const col = _cols[resolveCollection(collection)];
     if (!col) return { available: false, results: [] };
     const count = await col.count();
     if (count === 0) return { available: true, results: [] };
@@ -102,7 +106,16 @@ export async function semanticSearch(collection, query, topK = 5, filter = null)
 
 export async function deleteDocument(collection, id) {
   if (!_ready) return;
-  try { await _cols[collection].delete({ ids: [id] }); } catch {}
+  try { await _cols[resolveCollection(collection)].delete({ ids: [id] }); } catch {}
+}
+
+function resolveCollection(collection) {
+  if (!collection) return 'KNOWLEDGE';
+  if (_cols[collection]) return collection;
+  const key = String(collection).toUpperCase();
+  if (_cols[key]) return key;
+  const byName = Object.entries(COLLECTIONS).find(([, name]) => name === collection)?.[0];
+  return byName || 'KNOWLEDGE';
 }
 
 export async function getStats() {
