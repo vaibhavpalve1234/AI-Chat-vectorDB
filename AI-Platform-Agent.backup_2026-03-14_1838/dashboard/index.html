@@ -1,0 +1,1534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI-OS · Control Center</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+/* ── Fonts ─────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Syne:wght@400;600;700;800&display=swap');
+
+/* ── Variables ─────────────────────────────────────────── */
+:root {
+  --bg:        #080c10;
+  --bg2:       #0d1117;
+  --bg3:       #111820;
+  --border:    #1e2d3d;
+  --border2:   #243447;
+  --cyan:      #00d4ff;
+  --cyan2:     #0099cc;
+  --green:     #00ff9d;
+  --green2:    #00cc7a;
+  --yellow:    #ffd700;
+  --red:       #ff4757;
+  --purple:    #bd93f9;
+  --orange:    #ffb86c;
+  --text:      #c8d8e8;
+  --text2:     #7a9ab8;
+  --text3:     #3d5a75;
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-ui:   'Syne', sans-serif;
+  --glow-c:    0 0 20px rgba(0,212,255,.15);
+  --glow-g:    0 0 20px rgba(0,255,157,.15);
+  --radius:    6px;
+  --radius2:   10px;
+}
+
+/* ── Reset ─────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body { background: var(--bg); color: var(--text); font-family: var(--font-mono); font-size: 13px; display: flex; flex-direction: column; }
+
+/* ── Scrollbar ─────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+/* ── Topbar ─────────────────────────────────────────────── */
+#topbar {
+  display: flex; align-items: center; gap: 16px;
+  padding: 0 20px; height: 48px; flex-shrink: 0;
+  background: var(--bg2); border-bottom: 1px solid var(--border);
+  position: relative; z-index: 100;
+}
+.logo {
+  font-family: var(--font-ui); font-size: 16px; font-weight: 800;
+  letter-spacing: .5px; color: var(--cyan);
+  display: flex; align-items: center; gap: 8px;
+}
+.logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+.status-bar { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+.status-pill {
+  display: flex; align-items: center; gap: 5px;
+  padding: 3px 10px; border-radius: 20px; font-size: 11px;
+  border: 1px solid var(--border2); color: var(--text2);
+}
+.status-pill .dot { width: 6px; height: 6px; border-radius: 50%; }
+.dot-green  { background: var(--green);  box-shadow: 0 0 6px var(--green); }
+.dot-yellow { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); }
+.dot-red    { background: var(--red);    box-shadow: 0 0 6px var(--red); }
+.dot-gray   { background: var(--text3); }
+#ws-status  { font-size: 11px; color: var(--text3); }
+
+/* ── Main layout ────────────────────────────────────────── */
+#main { display: flex; flex: 1; overflow: hidden; }
+
+/* ── Sidebar ────────────────────────────────────────────── */
+#sidebar {
+  width: 200px; flex-shrink: 0;
+  background: var(--bg2); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; padding: 12px 0;
+}
+.nav-section { padding: 0 12px 8px; }
+.nav-label { font-size: 10px; color: var(--text3); letter-spacing: 1.5px; text-transform: uppercase; padding: 8px 8px 4px; }
+.nav-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 8px; border-radius: var(--radius);
+  cursor: pointer; color: var(--text2); font-size: 12px;
+  transition: all .15s; margin-bottom: 1px;
+}
+.nav-item:hover  { background: var(--bg3); color: var(--text); }
+.nav-item.active { background: rgba(0,212,255,.08); color: var(--cyan); border-left: 2px solid var(--cyan); padding-left: 6px; }
+.nav-icon { font-size: 14px; width: 16px; text-align: center; }
+
+/* ── Content area ───────────────────────────────────────── */
+#content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.panel { display: none; flex: 1; overflow: hidden; }
+.panel.active { display: flex; flex-direction: column; }
+
+/* ── Panel header ───────────────────────────────────────── */
+.panel-header {
+  padding: 16px 20px 12px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+}
+.panel-title { font-family: var(--font-ui); font-size: 15px; font-weight: 700; color: var(--text); }
+.panel-sub   { font-size: 11px; color: var(--text3); margin-left: auto; }
+
+/* ── Grid layouts ───────────────────────────────────────── */
+.scroll-area { flex: 1; overflow-y: auto; padding: 16px 20px; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+
+/* ── Cards ──────────────────────────────────────────────── */
+.card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius2); padding: 16px;
+}
+.card-label  { font-size: 10px; color: var(--text3); letter-spacing: 1.2px; text-transform: uppercase; margin-bottom: 6px; }
+.card-value  { font-family: var(--font-ui); font-size: 28px; font-weight: 800; color: var(--text); }
+.card-sub    { font-size: 11px; color: var(--text3); margin-top: 4px; }
+.card-cyan   { border-color: rgba(0,212,255,.25); box-shadow: var(--glow-c); }
+.card-green  { border-color: rgba(0,255,157,.25); box-shadow: var(--glow-g); }
+.card-yellow { border-color: rgba(255,215,0,.2); }
+.card-red    { border-color: rgba(255,71,87,.2); }
+
+/* ── Inputs ─────────────────────────────────────────────── */
+input, textarea, select {
+  background: var(--bg3); border: 1px solid var(--border);
+  color: var(--text); border-radius: var(--radius);
+  font-family: var(--font-mono); font-size: 13px;
+  padding: 8px 12px; outline: none; width: 100%;
+  transition: border-color .15s;
+}
+input:focus, textarea:focus, select:focus { border-color: var(--cyan2); }
+textarea { resize: vertical; min-height: 80px; }
+select option { background: var(--bg3); }
+
+/* ── Buttons ────────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px; border-radius: var(--radius);
+  font-family: var(--font-mono); font-size: 12px; font-weight: 500;
+  cursor: pointer; border: 1px solid transparent;
+  transition: all .15s; white-space: nowrap;
+}
+.btn-primary { background: var(--cyan); color: #000; border-color: var(--cyan); }
+.btn-primary:hover { background: var(--cyan2); border-color: var(--cyan2); box-shadow: 0 0 16px rgba(0,212,255,.3); }
+.btn-success { background: rgba(0,255,157,.1); color: var(--green); border-color: rgba(0,255,157,.3); }
+.btn-success:hover { background: rgba(0,255,157,.2); box-shadow: var(--glow-g); }
+.btn-danger  { background: rgba(255,71,87,.1);  color: var(--red);   border-color: rgba(255,71,87,.3); }
+.btn-danger:hover  { background: rgba(255,71,87,.2); }
+.btn-ghost   { background: transparent; color: var(--text2); border-color: var(--border2); }
+.btn-ghost:hover   { border-color: var(--cyan2); color: var(--cyan); }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.btn.loading::after { content: ''; width: 10px; height: 10px; border: 1px solid currentColor; border-top-color: transparent; border-radius: 50%; display: inline-block; animation: spin .6s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Form groups ─────────────────────────────────────────── */
+.form-row   { display: flex; gap: 8px; align-items: flex-end; }
+.form-group { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.form-label { font-size: 10px; color: var(--text3); letter-spacing: 1px; text-transform: uppercase; }
+
+/* ── Table ──────────────────────────────────────────────── */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; font-size: 10px; color: var(--text3); letter-spacing: 1.2px; text-transform: uppercase; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+td { padding: 9px 12px; border-bottom: 1px solid rgba(30,45,61,.6); font-size: 12px; }
+tr:hover td { background: rgba(0,212,255,.03); }
+.td-id    { color: var(--text3); font-size: 11px; }
+.td-mono  { font-family: var(--font-mono); }
+.td-trunc { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Badges ─────────────────────────────────────────────── */
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 4px;
+  font-size: 10px; font-weight: 500; letter-spacing: .5px;
+}
+.badge-running  { background: rgba(0,212,255,.12); color: var(--cyan);   border: 1px solid rgba(0,212,255,.25); }
+.badge-done     { background: rgba(0,255,157,.12); color: var(--green);  border: 1px solid rgba(0,255,157,.25); }
+.badge-pending  { background: rgba(255,215,0,.1);  color: var(--yellow); border: 1px solid rgba(255,215,0,.2); }
+.badge-failed   { background: rgba(255,71,87,.12); color: var(--red);    border: 1px solid rgba(255,71,87,.25); }
+.badge-queued   { background: rgba(189,147,249,.1);color: var(--purple); border: 1px solid rgba(189,147,249,.25); }
+.badge-cancelled{ background: rgba(120,120,120,.1);color: var(--text3);  border: 1px solid var(--border2); }
+.badge-research { background: rgba(0,212,255,.1);  color: var(--cyan); }
+.badge-coding   { background: rgba(0,255,157,.1);  color: var(--green); }
+.badge-tool     { background: rgba(255,184,108,.1);color: var(--orange); }
+.badge-evaluation{ background: rgba(189,147,249,.1);color: var(--purple); }
+
+/* ── Terminal / log ─────────────────────────────────────── */
+.terminal {
+  background: #040608; border: 1px solid var(--border);
+  border-radius: var(--radius2); overflow-y: auto;
+  font-family: var(--font-mono); font-size: 12px;
+  padding: 12px; flex: 1;
+}
+.log-entry { padding: 2px 0; display: flex; gap: 8px; align-items: flex-start; line-height: 1.5; }
+.log-ts   { color: var(--text3); flex-shrink: 0; font-size: 10px; padding-top: 1px; }
+.log-ev   { flex-shrink: 0; min-width: 120px; }
+.log-data { color: var(--text2); word-break: break-all; }
+.ev-task    { color: var(--cyan); }
+.ev-agent   { color: var(--green); }
+.ev-memory  { color: var(--purple); }
+.ev-tool    { color: var(--orange); }
+.ev-system  { color: var(--yellow); }
+.ev-model   { color: #ff79c6; }
+
+/* ── Result box ─────────────────────────────────────────── */
+.result-box {
+  background: #040608; border: 1px solid var(--border2);
+  border-radius: var(--radius2); padding: 14px;
+  font-size: 12px; line-height: 1.7; color: var(--text);
+  white-space: pre-wrap; word-break: break-word;
+  max-height: 320px; overflow-y: auto;
+}
+.result-box.success { border-color: rgba(0,255,157,.2); }
+.result-box.error   { border-color: rgba(255,71,87,.2); color: var(--red); }
+
+/* ── Divider ────────────────────────────────────────────── */
+.divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+
+/* ── Section title ──────────────────────────────────────── */
+.section-title {
+  font-family: var(--font-ui); font-size: 12px; font-weight: 700;
+  color: var(--text2); text-transform: uppercase; letter-spacing: 1.5px;
+  margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+}
+.section-title::after { content:''; flex:1; height:1px; background: var(--border); }
+
+/* ── Spinner ────────────────────────────────────────────── */
+.spinner { width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--cyan); border-radius: 50%; animation: spin .6s linear infinite; }
+
+/* ── Progress bar ───────────────────────────────────────── */
+.progress-wrap { background: var(--bg3); border-radius: 4px; height: 6px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 4px; transition: width .4s; }
+.pf-cyan   { background: linear-gradient(90deg, var(--cyan2), var(--cyan)); }
+.pf-green  { background: linear-gradient(90deg, var(--green2), var(--green)); }
+.pf-yellow { background: linear-gradient(90deg, #cc9900, var(--yellow)); }
+
+/* ── Toast ──────────────────────────────────────────────── */
+#toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+.toast {
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: var(--radius2); padding: 10px 16px;
+  font-size: 12px; color: var(--text); min-width: 220px;
+  display: flex; align-items: center; gap: 8px;
+  animation: toastIn .2s ease; box-shadow: 0 8px 32px rgba(0,0,0,.5);
+}
+.toast.success { border-color: rgba(0,255,157,.3); }
+.toast.error   { border-color: rgba(255,71,87,.3); }
+@keyframes toastIn { from { transform: translateX(20px); opacity:0; } to { transform: none; opacity:1; } }
+
+/* ── Metric bar ─────────────────────────────────────────── */
+.metric-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.metric-name { font-size: 11px; color: var(--text2); width: 120px; flex-shrink: 0; }
+.metric-val  { font-size: 11px; color: var(--text); width: 40px; text-align: right; flex-shrink: 0; }
+
+/* ── Right panel ────────────────────────────────────────── */
+#event-sidebar {
+  width: 280px; flex-shrink: 0; border-left: 1px solid var(--border);
+  display: flex; flex-direction: column; background: var(--bg2);
+}
+.event-header { padding: 10px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text3); }
+.event-list   { flex: 1; overflow-y: auto; padding: 4px 0; }
+.event-item   { padding: 5px 14px; border-bottom: 1px solid rgba(30,45,61,.4); }
+.event-item-ev { font-size: 10px; font-weight: 600; letter-spacing: .5px; }
+.event-item-ts { font-size: 10px; color: var(--text3); }
+.event-item-d  { font-size: 11px; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+
+/* ── Memory search result ───────────────────────────────── */
+.mem-result { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; margin-bottom: 8px; }
+.mem-score  { font-size: 10px; color: var(--cyan); margin-bottom: 4px; }
+.mem-text   { font-size: 12px; color: var(--text2); line-height: 1.6; }
+.mem-source { font-size: 10px; color: var(--text3); margin-top: 4px; }
+
+/* ── Tool card ──────────────────────────────────────────── */
+.tool-card  { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius2); padding: 12px; cursor: pointer; transition: border-color .15s; }
+.tool-card:hover { border-color: var(--cyan2); }
+.tool-card.selected { border-color: var(--cyan); background: rgba(0,212,255,.05); }
+.tool-name  { font-size: 12px; font-weight: 600; color: var(--cyan); margin-bottom: 4px; }
+.tool-desc  { font-size: 11px; color: var(--text3); line-height: 1.5; }
+
+/* ── Chart wrapper ──────────────────────────────────────── */
+.chart-wrap { position: relative; height: 160px; }
+
+/* ── Responsive hide ────────────────────────────────────── */
+@media (max-width: 1100px) { #event-sidebar { display: none; } }
+@media (max-width: 800px)  { #sidebar { width: 48px; } .nav-item span { display: none; } .nav-label { display: none; } }
+</style>
+</head>
+<body>
+
+<!-- ── Topbar ─────────────────────────────────────────── -->
+<div id="topbar">
+  <div class="logo">
+    <div class="logo-dot"></div>
+    AI-OS
+    <span style="color:var(--text3);font-size:10px;font-weight:400">Control Center</span>
+  </div>
+
+  <div class="status-bar">
+    <div class="status-pill"><div class="dot dot-green"></div><span id="s-agents">0 agents</span></div>
+    <div class="status-pill"><div class="dot dot-yellow"></div><span id="s-queue">0 queued</span></div>
+    <div class="status-pill"><div class="dot dot-gray"></div><span id="s-cache">cache 0%</span></div>
+    <div class="status-pill"><div class="dot dot-gray" id="s-model-dot"></div><span id="s-model">models…</span></div>
+    <div id="ws-status">⬤ connecting…</div>
+    <button class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="refreshAll()">⟳ Refresh</button>
+  </div>
+</div>
+
+<!-- ── Main ───────────────────────────────────────────── -->
+<div id="main">
+
+  <!-- Sidebar -->
+  <div id="sidebar">
+    <div class="nav-section">
+      <div class="nav-label">Overview</div>
+      <div class="nav-item active" onclick="nav('dashboard')"><span class="nav-icon">◈</span><span>Dashboard</span></div>
+      <div class="nav-item" onclick="nav('events')"><span class="nav-icon">⬡</span><span>Live Events</span></div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Run</div>
+      <div class="nav-item" onclick="nav('run')"><span class="nav-icon">▶</span><span>Run Goal</span></div>
+      <div class="nav-item" onclick="nav('agents')"><span class="nav-icon">◉</span><span>Agents</span></div>
+      <div class="nav-item" onclick="nav('queue')"><span class="nav-icon">⊞</span><span>Task Queue</span></div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Memory</div>
+      <div class="nav-item" onclick="nav('memory')"><span class="nav-icon">◎</span><span>Memory Search</span></div>
+      <div class="nav-item" onclick="nav('knowledge')"><span class="nav-icon">◆</span><span>Knowledge Graph</span></div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Tools</div>
+      <div class="nav-item" onclick="nav('tools')"><span class="nav-icon">⚙</span><span>Tool Runner</span></div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">System</div>
+      <div class="nav-item" onclick="nav('metrics')"><span class="nav-icon">◇</span><span>Metrics</span></div>
+      <div class="nav-item" onclick="nav('api')"><span class="nav-icon">⇄</span><span>API Explorer</span></div>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div id="content">
+
+    <!-- ── DASHBOARD ───────────────────────────────────── -->
+    <div id="panel-dashboard" class="panel active">
+      <div class="panel-header">
+        <span class="panel-title">Dashboard</span>
+        <span class="panel-sub" id="last-refresh">—</span>
+      </div>
+      <div class="scroll-area">
+        <div class="grid-4" style="margin-bottom:16px">
+          <div class="card card-cyan">
+            <div class="card-label">Agents Total</div>
+            <div class="card-value" id="d-agents-total">—</div>
+            <div class="card-sub" id="d-agents-sub">loading…</div>
+          </div>
+          <div class="card card-green">
+            <div class="card-label">Tasks Done</div>
+            <div class="card-value" id="d-tasks-done">—</div>
+            <div class="card-sub" id="d-queue-sub">loading…</div>
+          </div>
+          <div class="card card-yellow">
+            <div class="card-label">Cache Hit Rate</div>
+            <div class="card-value" id="d-cache-rate">—</div>
+            <div class="card-sub" id="d-cache-sub">hits / misses</div>
+          </div>
+          <div class="card">
+            <div class="card-label">Uptime</div>
+            <div class="card-value" id="d-uptime">—</div>
+            <div class="card-sub" id="d-uptime-sub">server time</div>
+          </div>
+        </div>
+
+        <div class="grid-2" style="margin-bottom:16px">
+          <div class="card">
+            <div class="section-title">Agent Activity</div>
+            <div class="chart-wrap"><canvas id="chart-agents"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="section-title">Tool Calls</div>
+            <div class="chart-wrap"><canvas id="chart-tools"></canvas></div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="section-title">Quick Run</div>
+            <div class="form-group" style="margin-bottom:8px">
+              <textarea id="quick-goal" rows="3" placeholder="Enter a goal to run… e.g. Research the latest AI trends"></textarea>
+            </div>
+            <div class="form-row">
+              <select id="quick-model" style="max-width:120px">
+                <option value="openai">GPT-4o</option>
+                <option value="claude">Claude</option>
+                <option value="ollama">Ollama</option>
+              </select>
+              <button class="btn btn-primary" onclick="quickRun()">▶ Run Goal</button>
+            </div>
+            <div id="quick-result" style="margin-top:12px;display:none"></div>
+          </div>
+          <div class="card">
+            <div class="section-title">Recent Agents</div>
+            <div id="d-recent-agents">
+              <div style="color:var(--text3);font-size:12px">Loading…</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── LIVE EVENTS ──────────────────────────────────── -->
+    <div id="panel-events" class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Live Events</span>
+        <div style="display:flex;gap:8px;margin-left:auto">
+          <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="clearLog()">Clear</button>
+          <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);cursor:pointer">
+            <input type="checkbox" id="log-auto-scroll" checked style="width:auto"> Auto-scroll
+          </label>
+        </div>
+      </div>
+      <div style="padding:12px;display:flex;gap:8px;border-bottom:1px solid var(--border);flex-shrink:0">
+        <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);cursor:pointer"><input type="checkbox" checked id="f-task" style="width:auto"> Tasks</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);cursor:pointer"><input type="checkbox" checked id="f-agent" style="width:auto"> Agents</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);cursor:pointer"><input type="checkbox" checked id="f-memory" style="width:auto"> Memory</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);cursor:pointer"><input type="checkbox" checked id="f-tool" style="width:auto"> Tools</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);cursor:pointer"><input type="checkbox" checked id="f-system" style="width:auto"> System</label>
+        <span id="log-count" style="margin-left:auto;font-size:11px;color:var(--text3)">0 events</span>
+      </div>
+      <div class="terminal" id="event-log" style="margin:12px;border-radius:var(--radius2)"></div>
+    </div>
+
+    <!-- ── RUN GOAL ─────────────────────────────────────── -->
+    <div id="panel-run" class="panel">
+      <div class="panel-header"><span class="panel-title">Run Goal</span></div>
+      <div class="scroll-area">
+        <div class="section-title">Full Plan + Execute</div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="form-group" style="margin-bottom:10px">
+            <label class="form-label">Goal / Task Description</label>
+            <textarea id="run-goal" rows="4" placeholder="Describe what you want to accomplish…&#10;e.g. Research recent advances in quantum computing and summarize key findings"></textarea>
+          </div>
+          <div class="form-row">
+            <div class="form-group" style="max-width:150px">
+              <label class="form-label">Model</label>
+              <select id="run-model">
+                <option value="openai">GPT-4o</option>
+                <option value="claude">Claude</option>
+                <option value="ollama">Ollama</option>
+                <option value="huggingface">HuggingFace</option>
+              </select>
+            </div>
+            <div style="display:flex;align-items:flex-end;gap:8px">
+              <button class="btn btn-primary" id="btn-run" onclick="runGoal()">▶ Plan & Execute</button>
+              <button class="btn btn-ghost" onclick="spawnAgentDirect()">⚡ Agent Direct</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-title">Spawn Specific Agent</div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="grid-2" style="margin-bottom:10px">
+            <div class="form-group">
+              <label class="form-label">Agent Type</label>
+              <select id="agent-type">
+                <option value="research">🔍 Research Agent</option>
+                <option value="coding">💻 Coding Agent</option>
+                <option value="evaluation">📊 Evaluation Agent</option>
+                <option value="tool">⚙ Tool Agent</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Model</label>
+              <select id="agent-model">
+                <option value="openai">GPT-4o</option>
+                <option value="claude">Claude</option>
+                <option value="ollama">Ollama</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom:10px">
+            <label class="form-label">Input</label>
+            <textarea id="agent-input" rows="3" placeholder="Task input for the agent…"></textarea>
+          </div>
+          <button class="btn btn-success" onclick="spawnAgent()">⚡ Spawn Agent</button>
+        </div>
+
+        <div class="section-title">Result</div>
+        <div id="run-result" class="result-box" style="min-height:80px;color:var(--text3)">Results will appear here…</div>
+      </div>
+    </div>
+
+    <!-- ── AGENTS ───────────────────────────────────────── -->
+    <div id="panel-agents" class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Agents</span>
+        <div style="display:flex;gap:8px;margin-left:auto">
+          <select id="agent-filter" onchange="loadAgents()" style="width:auto;padding:4px 8px;font-size:11px">
+            <option value="">All</option>
+            <option value="running">Running</option>
+            <option value="done">Done</option>
+            <option value="failed">Failed</option>
+            <option value="queued">Queued</option>
+          </select>
+          <button class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="loadAgents()">⟳</button>
+        </div>
+      </div>
+      <div class="scroll-area">
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>ID</th><th>Type</th><th>Status</th><th>Created</th><th>Duration</th><th>Result</th><th>Actions</th>
+            </tr></thead>
+            <tbody id="agents-table"><tr><td colspan="7" style="color:var(--text3);text-align:center;padding:20px">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TASK QUEUE ───────────────────────────────────── -->
+    <div id="panel-queue" class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Task Queue</span>
+        <div style="display:flex;gap:8px;margin-left:auto">
+          <div class="status-pill"><div class="dot dot-yellow"></div><span id="q-pending">0 pending</span></div>
+          <div class="status-pill"><div class="dot dot-green"></div><span id="q-done">0 done</span></div>
+          <button class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="loadQueue()">⟳</button>
+        </div>
+      </div>
+      <div class="scroll-area">
+        <div class="card" style="margin-bottom:16px">
+          <div class="section-title">Enqueue New Task</div>
+          <div class="grid-2" style="margin-bottom:10px">
+            <div class="form-group">
+              <label class="form-label">Task Type</label>
+              <select id="task-type">
+                <option value="research">research</option>
+                <option value="coding">coding</option>
+                <option value="evaluation">evaluation</option>
+                <option value="tool">tool</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Priority (0=high, 10=low)</label>
+              <input type="number" id="task-priority" value="5" min="0" max="10">
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom:10px">
+            <label class="form-label">Payload (text or JSON)</label>
+            <textarea id="task-payload" rows="2" placeholder="Task description or JSON payload…"></textarea>
+          </div>
+          <div class="form-group" style="margin-bottom:10px">
+            <label class="form-label">Tags (comma-separated)</label>
+            <input type="text" id="task-tags" placeholder="tag1, tag2">
+          </div>
+          <button class="btn btn-primary" onclick="enqueueTask()">⊞ Enqueue Task</button>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>ID</th><th>Type</th><th>Status</th><th>Priority</th><th>Created</th><th>Retries</th><th>Actions</th></tr></thead>
+            <tbody id="queue-table"><tr><td colspan="7" style="color:var(--text3);text-align:center;padding:20px">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── MEMORY ───────────────────────────────────────── -->
+    <div id="panel-memory" class="panel">
+      <div class="panel-header"><span class="panel-title">Memory Search</span></div>
+      <div class="scroll-area">
+        <div class="card" style="margin-bottom:16px">
+          <div class="section-title">Semantic Search</div>
+          <div class="form-row" style="margin-bottom:10px">
+            <div class="form-group">
+              <label class="form-label">Search Query</label>
+              <input type="text" id="mem-query" placeholder="Search memory semantically…" onkeydown="if(event.key==='Enter')searchMemory()">
+            </div>
+            <div class="form-group" style="max-width:80px">
+              <label class="form-label">Top K</label>
+              <input type="number" id="mem-topk" value="5" min="1" max="20">
+            </div>
+            <div style="display:flex;align-items:flex-end">
+              <button class="btn btn-primary" onclick="searchMemory()">Search</button>
+            </div>
+          </div>
+          <div id="mem-results"><div style="color:var(--text3);font-size:12px">Search results appear here…</div></div>
+        </div>
+
+        <div class="card">
+          <div class="section-title">Store Memory</div>
+          <div class="form-group" style="margin-bottom:10px">
+            <label class="form-label">Content</label>
+            <textarea id="mem-content" rows="3" placeholder="Knowledge or information to store…"></textarea>
+          </div>
+          <div class="form-group" style="margin-bottom:10px">
+            <label class="form-label">Source (optional)</label>
+            <input type="text" id="mem-source" placeholder="e.g. manual, research-2024…">
+          </div>
+          <button class="btn btn-success" onclick="storeMemory()">💾 Store Memory</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── KNOWLEDGE GRAPH ──────────────────────────────── -->
+    <div id="panel-knowledge" class="panel">
+      <div class="panel-header"><span class="panel-title">Knowledge Graph</span></div>
+      <div class="scroll-area">
+        <div class="grid-2" style="margin-bottom:16px">
+          <div class="card card-cyan">
+            <div class="card-label">Nodes</div>
+            <div class="card-value" id="kg-nodes">—</div>
+          </div>
+          <div class="card">
+            <div class="card-label">Edges</div>
+            <div class="card-value" id="kg-edges">—</div>
+          </div>
+        </div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="section-title">Add Node</div>
+          <div class="grid-2" style="margin-bottom:10px">
+            <div class="form-group">
+              <label class="form-label">Label</label>
+              <input type="text" id="kg-label" placeholder="Node label…">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Type</label>
+              <select id="kg-type">
+                <option value="concept">concept</option>
+                <option value="person">person</option>
+                <option value="technology">technology</option>
+                <option value="fact">fact</option>
+                <option value="event">event</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom:10px">
+            <label class="form-label">Content</label>
+            <textarea id="kg-content" rows="2" placeholder="Node content…"></textarea>
+          </div>
+          <button class="btn btn-primary" onclick="addKgNode()">+ Add Node</button>
+        </div>
+        <div class="card">
+          <div class="section-title">Graph Data (via Memory Search)</div>
+          <div class="form-row">
+            <input type="text" id="kg-search" placeholder="Search nodes…" onkeydown="if(event.key==='Enter')searchKg()">
+            <button class="btn btn-ghost" style="flex-shrink:0" onclick="searchKg()">Search</button>
+          </div>
+          <div id="kg-results" style="margin-top:12px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TOOLS ────────────────────────────────────────── -->
+    <div id="panel-tools" class="panel">
+      <div class="panel-header"><span class="panel-title">Tool Runner</span></div>
+      <div class="scroll-area">
+        <div class="grid-2" style="margin-bottom:16px">
+          <div>
+            <div class="section-title">Available Tools</div>
+            <div id="tools-list" class="grid-2" style="gap:8px"></div>
+          </div>
+          <div>
+            <div class="section-title">Execute Tool</div>
+            <div class="card">
+              <div class="form-group" style="margin-bottom:10px">
+                <label class="form-label">Tool Name</label>
+                <input type="text" id="tool-name" placeholder="e.g. web_search" readonly>
+              </div>
+              <div class="form-group" style="margin-bottom:10px">
+                <label class="form-label">Parameters (JSON)</label>
+                <textarea id="tool-params" rows="5" placeholder='{"query": "latest AI news"}'></textarea>
+              </div>
+              <button class="btn btn-primary" id="btn-tool" onclick="runTool()">⚙ Execute Tool</button>
+              <div id="tool-result" style="margin-top:12px;display:none"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── METRICS ──────────────────────────────────────── -->
+    <div id="panel-metrics" class="panel">
+      <div class="panel-header"><span class="panel-title">System Metrics</span>
+        <button class="btn btn-ghost" style="padding:4px 10px;font-size:11px;margin-left:auto" onclick="loadMetrics()">⟳ Refresh</button>
+      </div>
+      <div class="scroll-area">
+        <div class="grid-3" style="margin-bottom:16px">
+          <div class="card">
+            <div class="section-title">Kernel</div>
+            <div id="metrics-kernel"></div>
+          </div>
+          <div class="card">
+            <div class="section-title">Memory</div>
+            <div id="metrics-memory"></div>
+          </div>
+          <div class="card">
+            <div class="section-title">Queue</div>
+            <div id="metrics-queue"></div>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="section-title">Live Counters</div>
+            <div id="metrics-live"></div>
+          </div>
+          <div class="card">
+            <div class="section-title">Storage</div>
+            <div id="metrics-store"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── API EXPLORER ─────────────────────────────────── -->
+    <div id="panel-api" class="panel">
+      <div class="panel-header"><span class="panel-title">API Explorer</span></div>
+      <div class="scroll-area">
+        <div class="card" style="margin-bottom:16px">
+          <div class="form-row" style="margin-bottom:10px;align-items:flex-end">
+            <div class="form-group" style="max-width:90px">
+              <label class="form-label">Method</label>
+              <select id="api-method">
+                <option>GET</option><option>POST</option><option>DELETE</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Endpoint</label>
+              <input type="text" id="api-endpoint" placeholder="/api/health" value="/api/health">
+            </div>
+            <button class="btn btn-primary" onclick="callApi()">Send</button>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Request Body (JSON)</label>
+            <textarea id="api-body" rows="4" placeholder='{"key": "value"}'></textarea>
+          </div>
+        </div>
+        <div class="section-title">Quick Endpoints</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px" id="quick-endpoints"></div>
+        <div class="section-title">Response</div>
+        <pre id="api-response" class="result-box" style="min-height:120px;color:var(--text3)">Response appears here…</pre>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+
+  <!-- Right: live event sidebar -->
+  <div id="event-sidebar">
+    <div class="event-header">
+      ⬡ Live Stream
+      <span style="margin-left:auto;color:var(--green);font-size:10px" id="ev-count">0</span>
+    </div>
+    <div class="event-list" id="ev-sidebar-list"></div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- Toast -->
+<div id="toast-container"></div>
+
+<script>
+// ── Config ────────────────────────────────────────────────
+const BASE = `${location.protocol}//${location.hostname}:${location.port || 3000}`;
+const WS_URL = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.hostname}:${location.port || 3000}/ws`;
+
+// ── State ─────────────────────────────────────────────────
+let ws = null;
+let wsReady = false;
+let logEntries = [];
+let evCount = 0;
+let charts = {};
+let chartData = { agents: [0,0,0,0,0,0,0,0,0,0], tools: [0,0,0,0,0,0,0,0,0,0] };
+let metricsCache = {};
+let toolsList = [];
+
+// ── API helper ────────────────────────────────────────────
+async function api(method, path, body = null) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(BASE + path, opts);
+  return res.json();
+}
+
+// ── Navigation ────────────────────────────────────────────
+function nav(page) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('panel-' + page)?.classList.add('active');
+  document.querySelector(`.nav-item[onclick="nav('${page}')"]`)?.classList.add('active');
+
+  // Lazy load
+  if (page === 'agents')   loadAgents();
+  if (page === 'queue')    loadQueue();
+  if (page === 'metrics')  loadMetrics();
+  if (page === 'tools')    loadTools();
+  if (page === 'api')      buildApiExplorer();
+}
+
+// ── WebSocket ─────────────────────────────────────────────
+function connectWS() {
+  ws = new WebSocket(WS_URL);
+  const statusEl = document.getElementById('ws-status');
+
+  ws.onopen = () => {
+    wsReady = true;
+    statusEl.textContent = '⬤ connected';
+    statusEl.style.color = 'var(--green)';
+    toast('WebSocket connected', 'success');
+  };
+
+  ws.onclose = () => {
+    wsReady = false;
+    statusEl.textContent = '⬤ disconnected';
+    statusEl.style.color = 'var(--red)';
+    setTimeout(connectWS, 3000);
+  };
+
+  ws.onerror = () => {
+    statusEl.textContent = '⬤ error';
+    statusEl.style.color = 'var(--yellow)';
+  };
+
+  ws.onmessage = ({ data }) => {
+    try {
+      const { event, data: payload, ts } = JSON.parse(data);
+      handleEvent(event, payload, ts);
+    } catch {}
+  };
+}
+
+function handleEvent(event, payload, ts) {
+  evCount++;
+  document.getElementById('ev-count').textContent = evCount;
+
+  // Update status bar from events
+  if (event === 'agent:done' || event === 'agent:spawned') {
+    chartData.agents.push(1); chartData.agents.shift();
+    updateChart('chart-agents', chartData.agents, 'Agents');
+    setTimeout(loadDashboardStats, 500);
+  }
+  if (event === 'tool:called') {
+    chartData.tools.push(1); chartData.tools.shift();
+    updateChart('chart-tools', chartData.tools, 'Tools');
+  }
+  if (event === 'memory:cache_hit')  updateCacheDisplay(true);
+  if (event === 'memory:cache_miss') updateCacheDisplay(false);
+
+  // Add to event log
+  appendLog(event, payload, ts || new Date().toISOString());
+  appendSidebarEvent(event, payload, ts);
+}
+
+// ── Log ───────────────────────────────────────────────────
+let cacheHits = 0, cacheMisses = 0;
+function updateCacheDisplay(hit) {
+  if (hit) cacheHits++; else cacheMisses++;
+  const total = cacheHits + cacheMisses;
+  const rate = total ? ((cacheHits / total) * 100).toFixed(0) : 0;
+  document.getElementById('s-cache').textContent = `cache ${rate}%`;
+  document.getElementById('d-cache-rate').textContent = `${rate}%`;
+  document.getElementById('d-cache-sub').textContent = `${cacheHits} hits / ${cacheMisses} misses`;
+}
+
+function appendLog(event, payload, ts) {
+  const filters = { task: 'f-task', agent: 'f-agent', memory: 'f-memory', tool: 'f-tool', system: 'f-system' };
+  const cat = event.split(':')[0];
+  const checkbox = document.getElementById(filters[cat]);
+  if (checkbox && !checkbox.checked) return;
+
+  const time = ts ? ts.slice(11, 19) : new Date().toISOString().slice(11, 19);
+  const colorClass = { task:'ev-task', agent:'ev-agent', memory:'ev-memory', tool:'ev-tool', system:'ev-system', model:'ev-model' }[cat] || 'ev-system';
+
+  const entry = document.createElement('div');
+  entry.className = 'log-entry';
+  entry.innerHTML = `<span class="log-ts">${time}</span><span class="log-ev ${colorClass}">${event}</span><span class="log-data">${JSON.stringify(payload || {}).slice(0, 120)}</span>`;
+
+  const log = document.getElementById('event-log');
+  log.appendChild(entry);
+
+  const countEl = document.getElementById('log-count');
+  logEntries.push(entry);
+  if (logEntries.length > 500) { log.removeChild(logEntries.shift()); }
+  countEl.textContent = `${logEntries.length} events`;
+
+  if (document.getElementById('log-auto-scroll').checked) {
+    log.scrollTop = log.scrollHeight;
+  }
+}
+
+function appendSidebarEvent(event, payload, ts) {
+  const list = document.getElementById('ev-sidebar-list');
+  const time = ts ? ts.slice(11, 19) : new Date().toISOString().slice(11, 19);
+  const cat  = event.split(':')[0];
+  const colorClass = { task:'ev-task', agent:'ev-agent', memory:'ev-memory', tool:'ev-tool', system:'ev-system', model:'ev-model' }[cat] || 'ev-system';
+
+  const item = document.createElement('div');
+  item.className = 'event-item';
+  item.innerHTML = `
+    <div style="display:flex;justify-content:space-between">
+      <span class="event-item-ev ${colorClass}">${event}</span>
+      <span class="event-item-ts">${time}</span>
+    </div>
+    <div class="event-item-d">${JSON.stringify(payload || {}).slice(0, 80)}</div>
+  `;
+  list.insertBefore(item, list.firstChild);
+  while (list.children.length > 100) list.removeChild(list.lastChild);
+}
+
+function clearLog() {
+  document.getElementById('event-log').innerHTML = '';
+  logEntries = [];
+  document.getElementById('log-count').textContent = '0 events';
+}
+
+// ── Charts ────────────────────────────────────────────────
+function initCharts() {
+  const baseOpts = {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { display: false },
+      y: { display: false, beginAtZero: true },
+    },
+    elements: { point: { radius: 0 } },
+    animation: { duration: 200 },
+  };
+
+  charts.agents = new Chart(document.getElementById('chart-agents'), {
+    type: 'line',
+    data: { labels: Array(10).fill(''), datasets: [{ data: [...chartData.agents], borderColor: 'var(--cyan)', backgroundColor: 'rgba(0,212,255,.07)', borderWidth: 2, fill: true, tension: 0.4 }] },
+    options: baseOpts,
+  });
+
+  charts.tools = new Chart(document.getElementById('chart-tools'), {
+    type: 'bar',
+    data: { labels: Array(10).fill(''), datasets: [{ data: [...chartData.tools], backgroundColor: 'rgba(255,184,108,.4)', borderColor: 'var(--orange)', borderWidth: 1 }] },
+    options: baseOpts,
+  });
+}
+
+function updateChart(id, data, label) {
+  const c = charts[id === 'chart-agents' ? 'agents' : 'tools'];
+  if (!c) return;
+  c.data.datasets[0].data = [...data];
+  c.update('none');
+}
+
+// ── Dashboard ─────────────────────────────────────────────
+async function loadDashboardStats() {
+  try {
+    const [metrics, health] = await Promise.all([
+      api('GET', '/api/metrics').catch(() => null),
+      api('GET', '/api/health').catch(() => null),
+    ]);
+
+    if (metrics?.kernel) {
+      const k = metrics.kernel;
+      document.getElementById('d-agents-total').textContent = k.total ?? '—';
+      document.getElementById('d-agents-sub').textContent   = `${k.running ?? 0} running · ${k.failed ?? 0} failed`;
+      document.getElementById('s-agents').textContent = `${k.running ?? 0} running`;
+    }
+    if (metrics?.queue) {
+      const q = metrics.queue;
+      document.getElementById('d-tasks-done').textContent = q.done ?? '—';
+      document.getElementById('d-queue-sub').textContent  = `${q.pending ?? 0} pending · ${q.failed ?? 0} failed`;
+      document.getElementById('s-queue').textContent = `${q.pending ?? 0} queued`;
+    }
+    if (metrics?.uptime) {
+      document.getElementById('d-uptime').textContent = metrics.uptime;
+    }
+    if (health?.uptime != null) {
+      document.getElementById('d-uptime-sub').textContent = `${Math.floor(health.uptime)}s process uptime`;
+    }
+    document.getElementById('last-refresh').textContent = 'Updated ' + new Date().toLocaleTimeString();
+
+    // Recent agents
+    const agentsRes = await api('GET', '/api/agents').catch(() => null);
+    if (agentsRes?.agents) {
+      const recent = agentsRes.agents.slice(0, 5);
+      document.getElementById('d-recent-agents').innerHTML = recent.length === 0
+        ? '<div style="color:var(--text3);font-size:12px">No agents yet</div>'
+        : recent.map(a => `
+          <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
+            <span class="badge badge-${a.type || 'tool'}">${a.type || '?'}</span>
+            <span class="badge badge-${a.status}">${a.status}</span>
+            <span style="font-size:11px;color:var(--text3);margin-left:auto">${fmtTime(a.createdAt)}</span>
+          </div>`).join('');
+    }
+  } catch {}
+}
+
+// ── Agents ────────────────────────────────────────────────
+async function loadAgents() {
+  const filter = document.getElementById('agent-filter')?.value;
+  const res = await api('GET', '/api/agents').catch(() => null);
+  const tbody = document.getElementById('agents-table');
+  if (!res?.agents) { tbody.innerHTML = '<tr><td colspan="7" style="color:var(--red);text-align:center;padding:20px">Failed to load</td></tr>'; return; }
+
+  const agents = filter ? res.agents.filter(a => a.status === filter) : res.agents;
+  if (!agents.length) { tbody.innerHTML = '<tr><td colspan="7" style="color:var(--text3);text-align:center;padding:20px">No agents</td></tr>'; return; }
+
+  tbody.innerHTML = agents.map(a => {
+    const dur = a.startedAt && a.finishedAt ? `${Math.round((new Date(a.finishedAt) - new Date(a.startedAt)) / 1000)}s` : a.startedAt ? 'running…' : '—';
+    const result = a.result ? JSON.stringify(a.result).slice(0, 60) + '…' : a.error || '—';
+    return `<tr>
+      <td class="td-id">${a.id?.slice(0,8)}</td>
+      <td><span class="badge badge-${a.type}">${a.type || '?'}</span></td>
+      <td><span class="badge badge-${a.status}">${a.status}</span></td>
+      <td style="font-size:11px;color:var(--text3)">${fmtTime(a.createdAt)}</td>
+      <td style="font-size:11px;color:var(--text2)">${dur}</td>
+      <td class="td-trunc" style="font-size:11px;color:var(--text2)" title="${result}">${result}</td>
+      <td>
+        ${a.status === 'running' || a.status === 'queued'
+          ? `<button class="btn btn-danger" style="padding:2px 8px;font-size:10px" onclick="cancelAgent('${a.id}')">Cancel</button>`
+          : ''}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function cancelAgent(id) {
+  await api('DELETE', `/api/agents/${id}`);
+  toast('Agent cancelled', 'success');
+  loadAgents();
+}
+
+// ── Queue ─────────────────────────────────────────────────
+async function loadQueue() {
+  const res = await api('GET', '/api/tasks').catch(() => null);
+  if (!res) return;
+
+  if (res.stats) {
+    document.getElementById('q-pending').textContent = `${res.stats.pending} pending`;
+    document.getElementById('q-done').textContent    = `${res.stats.done} done`;
+  }
+
+  const tbody = document.getElementById('queue-table');
+  if (!res.tasks?.length) { tbody.innerHTML = '<tr><td colspan="7" style="color:var(--text3);text-align:center;padding:20px">Queue empty</td></tr>'; return; }
+
+  tbody.innerHTML = res.tasks.map(t => `<tr>
+    <td class="td-id">${t.id?.slice(0,8)}</td>
+    <td><span class="badge badge-${t.type}">${t.type}</span></td>
+    <td><span class="badge badge-${t.status}">${t.status}</span></td>
+    <td style="color:var(--text2)">${t.priority}</td>
+    <td style="font-size:11px;color:var(--text3)">${fmtTime(t.createdAt)}</td>
+    <td style="color:var(--text2)">${t.retries}/${t.maxRetries}</td>
+    <td>
+      ${t.status === 'pending'
+        ? `<button class="btn btn-danger" style="padding:2px 8px;font-size:10px" onclick="cancelTask('${t.id}')">Cancel</button>`
+        : ''}
+    </td>
+  </tr>`).join('');
+}
+
+async function enqueueTask() {
+  const type     = document.getElementById('task-type').value;
+  const payload  = document.getElementById('task-payload').value.trim();
+  const priority = parseInt(document.getElementById('task-priority').value);
+  const tagsRaw  = document.getElementById('task-tags').value;
+  const tags     = tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean) : [];
+
+  if (!payload) { toast('Payload is required', 'error'); return; }
+
+  let parsedPayload;
+  try { parsedPayload = JSON.parse(payload); } catch { parsedPayload = payload; }
+
+  const res = await api('POST', '/api/task', { type, payload: parsedPayload, priority, tags });
+  if (res.taskId) {
+    toast(`Task queued: ${res.taskId.slice(0, 8)}`, 'success');
+    loadQueue();
+  } else {
+    toast(res.error || 'Failed', 'error');
+  }
+}
+
+async function cancelTask(id) {
+  await api('DELETE', `/api/tasks/${id}`);
+  toast('Task cancelled', 'success');
+  loadQueue();
+}
+
+// ── Run Goal ──────────────────────────────────────────────
+async function runGoal() {
+  const goal  = document.getElementById('run-goal').value.trim();
+  const model = document.getElementById('run-model').value;
+  if (!goal) { toast('Enter a goal', 'error'); return; }
+
+  const btn = document.getElementById('btn-run');
+  btn.classList.add('loading'); btn.disabled = true;
+  setResult('run-result', '⏳ Planning and executing goal…', 'info');
+
+  try {
+    const res = await api('POST', '/api/run', { goal, model });
+    if (res.ok) {
+      const answer = res.execution?.finalResult?.answer || res.execution?.finalResult || JSON.stringify(res.execution?.context?.lastResult || res, null, 2);
+      setResult('run-result', typeof answer === 'string' ? answer : JSON.stringify(answer, null, 2), 'success');
+      toast('Goal completed!', 'success');
+    } else {
+      setResult('run-result', res.error || 'Failed', 'error');
+    }
+  } catch (e) {
+    setResult('run-result', e.message, 'error');
+  } finally {
+    btn.classList.remove('loading'); btn.disabled = false;
+  }
+}
+
+async function quickRun() {
+  const goal  = document.getElementById('quick-goal').value.trim();
+  const model = document.getElementById('quick-model').value;
+  if (!goal) { toast('Enter a goal', 'error'); return; }
+  nav('run');
+  document.getElementById('run-goal').value = goal;
+  document.getElementById('run-model').value = model;
+  runGoal();
+}
+
+async function spawnAgentDirect() {
+  const goal  = document.getElementById('run-goal').value.trim();
+  const model = document.getElementById('run-model').value;
+  if (!goal) { toast('Enter a goal', 'error'); return; }
+  document.getElementById('agent-input').value = goal;
+  document.getElementById('agent-model').value = model;
+  spawnAgent();
+}
+
+async function spawnAgent() {
+  const type  = document.getElementById('agent-type').value;
+  const input = document.getElementById('agent-input').value.trim();
+  const model = document.getElementById('agent-model').value;
+  if (!input) { toast('Enter agent input', 'error'); return; }
+
+  const res = await api('POST', '/api/agent', { type, input, options: { model } });
+  if (res.agentId) {
+    setResult('run-result', `Agent spawned: ${res.agentId}\nPolling for result…`, 'info');
+    toast(`Agent ${type} spawned`, 'success');
+    pollAgent(res.agentId);
+  } else {
+    setResult('run-result', res.error || 'Failed', 'error');
+  }
+}
+
+async function pollAgent(id, attempts = 0) {
+  if (attempts > 60) return;
+  const res = await api('GET', `/api/agents/${id}`).catch(() => null);
+  const a   = res?.agent;
+  if (!a) return;
+
+  if (a.status === 'done') {
+    const text = a.result?.answer || a.result?.code || a.result?.result || JSON.stringify(a.result, null, 2);
+    setResult('run-result', text, 'success');
+    toast('Agent completed', 'success');
+    loadAgents();
+  } else if (a.status === 'failed') {
+    setResult('run-result', `Agent failed: ${a.error}`, 'error');
+  } else {
+    setTimeout(() => pollAgent(id, attempts + 1), 2000);
+  }
+}
+
+// ── Memory ────────────────────────────────────────────────
+async function searchMemory() {
+  const q    = document.getElementById('mem-query').value.trim();
+  const topK = document.getElementById('mem-topk').value;
+  if (!q) { toast('Enter a query', 'error'); return; }
+
+  const res = await api('GET', `/api/memory/search?q=${encodeURIComponent(q)}&topK=${topK}`).catch(() => null);
+  const container = document.getElementById('mem-results');
+
+  if (!res?.results?.length) {
+    container.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:8px 0">No results found</div>';
+    return;
+  }
+
+  container.innerHTML = res.results.map(r => `
+    <div class="mem-result">
+      <div class="mem-score">similarity: ${(r.score * 100).toFixed(1)}% · ${r.metadata?.source || 'unknown'}</div>
+      <div class="mem-text">${r.text?.slice(0, 300)}</div>
+    </div>`).join('');
+}
+
+async function storeMemory() {
+  const content = document.getElementById('mem-content').value.trim();
+  const source  = document.getElementById('mem-source').value.trim();
+  if (!content) { toast('Enter content', 'error'); return; }
+
+  const res = await api('POST', '/api/memory', { content, metadata: { source: source || 'manual' } });
+  if (res.id) {
+    toast(`Memory stored: ${res.id.slice(0, 8)}`, 'success');
+    document.getElementById('mem-content').value = '';
+    document.getElementById('mem-source').value  = '';
+  } else {
+    toast(res.error || 'Failed', 'error');
+  }
+}
+
+// ── Knowledge Graph ───────────────────────────────────────
+async function loadKgStats() {
+  const res = await api('GET', '/api/memory/stats').catch(() => null);
+  if (res?.knowledgeGraph) {
+    document.getElementById('kg-nodes').textContent = res.knowledgeGraph.nodes ?? '—';
+    document.getElementById('kg-edges').textContent = res.knowledgeGraph.edges ?? '—';
+  }
+}
+
+async function addKgNode() {
+  const label   = document.getElementById('kg-label').value.trim();
+  const type    = document.getElementById('kg-type').value;
+  const content = document.getElementById('kg-content').value.trim();
+  if (!label) { toast('Label required', 'error'); return; }
+
+  const res = await api('POST', '/api/memory', { content: content || label, metadata: { source: 'kg', label, type, entities: [label] } });
+  if (res.id) {
+    toast(`Node stored: ${label}`, 'success');
+    document.getElementById('kg-label').value   = '';
+    document.getElementById('kg-content').value = '';
+    loadKgStats();
+  }
+}
+
+async function searchKg() {
+  const q = document.getElementById('kg-search').value.trim();
+  if (!q) return;
+  const res = await api('GET', `/api/memory/search?q=${encodeURIComponent(q)}&topK=5`).catch(() => null);
+  const container = document.getElementById('kg-results');
+  if (!res?.results?.length) { container.innerHTML = '<div style="color:var(--text3);font-size:12px">No nodes found</div>'; return; }
+  container.innerHTML = res.results.map(r => `
+    <div class="mem-result">
+      <div class="mem-score">${r.metadata?.label || 'node'} · ${r.metadata?.type || 'concept'} · ${(r.score*100).toFixed(1)}%</div>
+      <div class="mem-text">${r.text?.slice(0,200)}</div>
+    </div>`).join('');
+}
+
+// ── Tools ─────────────────────────────────────────────────
+async function loadTools() {
+  const res = await api('GET', '/api/tools').catch(() => null);
+  if (!res?.tools) return;
+  toolsList = res.tools;
+
+  const container = document.getElementById('tools-list');
+  container.innerHTML = res.tools.map(t => `
+    <div class="tool-card" id="tc-${t.name}" onclick="selectTool('${t.name}')">
+      <div class="tool-name">⚙ ${t.name}</div>
+      <div class="tool-desc">${t.description}</div>
+    </div>`).join('');
+}
+
+function selectTool(name) {
+  document.querySelectorAll('.tool-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('tc-' + name)?.classList.add('selected');
+  document.getElementById('tool-name').value = name;
+
+  const tool = toolsList.find(t => t.name === name);
+  if (tool?.schema?.properties) {
+    const example = {};
+    for (const [k, v] of Object.entries(tool.schema.properties)) {
+      example[k] = v.type === 'string' ? `<${k}>` : v.type === 'number' ? 5 : v.type === 'array' ? [] : {};
+    }
+    document.getElementById('tool-params').value = JSON.stringify(example, null, 2);
+  }
+}
+
+async function runTool() {
+  const name   = document.getElementById('tool-name').value.trim();
+  const params = document.getElementById('tool-params').value.trim();
+  if (!name) { toast('Select a tool first', 'error'); return; }
+
+  let parsedParams = {};
+  if (params) try { parsedParams = JSON.parse(params); } catch { toast('Invalid JSON params', 'error'); return; }
+
+  const btn = document.getElementById('btn-tool');
+  btn.classList.add('loading'); btn.disabled = true;
+  document.getElementById('tool-result').style.display = 'none';
+
+  try {
+    const res = await api('POST', `/api/tools/${name}`, parsedParams);
+    document.getElementById('tool-result').style.display = 'block';
+    document.getElementById('tool-result').innerHTML =
+      `<div class="result-box ${res.ok !== false ? 'success' : 'error'}" style="max-height:280px">${JSON.stringify(res.result || res, null, 2)}</div>`;
+    if (res.ok !== false) toast(`Tool ${name} completed`, 'success');
+  } catch (e) {
+    document.getElementById('tool-result').style.display = 'block';
+    document.getElementById('tool-result').innerHTML = `<div class="result-box error">${e.message}</div>`;
+  } finally {
+    btn.classList.remove('loading'); btn.disabled = false;
+  }
+}
+
+// ── Metrics ───────────────────────────────────────────────
+async function loadMetrics() {
+  const res = await api('GET', '/api/metrics').catch(() => null);
+  if (!res) return;
+  metricsCache = res;
+
+  const render = (id, rows) => {
+    document.getElementById(id).innerHTML = rows.map(([k, v]) =>
+      `<div class="metric-row">
+        <span class="metric-name">${k}</span>
+        <div class="progress-wrap" style="flex:1">
+          <div class="progress-fill pf-cyan" style="width:${Math.min(100, v.pct || 0)}%"></div>
+        </div>
+        <span class="metric-val">${v.display}</span>
+      </div>`).join('');
+  };
+
+  if (res.kernel) {
+    const k = res.kernel;
+    render('metrics-kernel', [
+      ['Total Agents', { display: k.total ?? 0, pct: 0 }],
+      ['Running',      { display: k.running ?? 0, pct: k.total ? (k.running / k.total) * 100 : 0 }],
+      ['Completed',    { display: k.done ?? 0,    pct: k.total ? (k.done / k.total) * 100 : 0 }],
+      ['Failed',       { display: k.failed ?? 0,  pct: k.total ? (k.failed / k.total) * 100 : 0 }],
+    ]);
+  }
+  if (res.queue) {
+    const q = res.queue;
+    const t = q.total || 1;
+    render('metrics-queue', [
+      ['Pending',  { display: q.pending ?? 0,  pct: (q.pending / t) * 100 }],
+      ['Running',  { display: q.running ?? 0,  pct: (q.running / t) * 100 }],
+      ['Done',     { display: q.done ?? 0,     pct: (q.done / t) * 100 }],
+      ['Failed',   { display: q.failed ?? 0,   pct: (q.failed / t) * 100 }],
+    ]);
+  }
+  if (res.metrics) {
+    const m = res.metrics;
+    const th = m.cacheHits + m.cacheMisses || 1;
+    render('metrics-live', [
+      ['Cache Hit Rate', { display: m.cacheHitRate || '0%', pct: parseFloat(m.cacheHitRate) || 0 }],
+      ['Cache Hits',     { display: m.cacheHits ?? 0,       pct: (m.cacheHits / th) * 100 }],
+      ['Tool Calls',     { display: m.toolCalls ?? 0,       pct: Math.min(100, (m.toolCalls ?? 0) * 5) }],
+      ['Tool Errors',    { display: m.toolErrors ?? 0,      pct: m.toolCalls ? (m.toolErrors / m.toolCalls) * 100 : 0 }],
+    ]);
+  }
+
+  // Memory & Store
+  const memRes = await api('GET', '/api/memory/stats').catch(() => null);
+  if (memRes) {
+    let html = '';
+    if (memRes.vectorDB) {
+      const cols = Object.entries(memRes.vectorDB.collections || {});
+      html += cols.map(([k, v]) => `<div class="metric-row"><span class="metric-name">${k}</span><div class="progress-wrap" style="flex:1"><div class="progress-fill pf-cyan" style="width:${Math.min(100, v)}%"></div></div><span class="metric-val">${v}</span></div>`).join('');
+    }
+    document.getElementById('metrics-memory').innerHTML = html || '<div style="color:var(--text3);font-size:12px">ChromaDB offline</div>';
+
+    if (memRes.datasetStore) {
+      const s = memRes.datasetStore;
+      render('metrics-store', [
+        ['History',  { display: s.historyCount ?? 0, pct: Math.min(100, s.historyCount) }],
+        ['Datasets', { display: s.datasetCount ?? 0, pct: Math.min(100, s.datasetCount * 10) }],
+        ['Evals',    { display: s.evalCategories?.length ?? 0, pct: Math.min(100, (s.evalCategories?.length ?? 0) * 20) }],
+      ]);
+    }
+  }
+}
+
+// ── API Explorer ──────────────────────────────────────────
+function buildApiExplorer() {
+  const endpoints = [
+    ['GET',    '/api/health', null, 'Health'],
+    ['GET',    '/api/metrics', null, 'Metrics'],
+    ['GET',    '/api/models', null, 'Models'],
+    ['GET',    '/api/agents', null, 'List Agents'],
+    ['GET',    '/api/tasks', null, 'List Tasks'],
+    ['GET',    '/api/tools', null, 'List Tools'],
+    ['POST',   '/api/run', '{"goal":"Explain quantum entanglement","model":"openai"}', 'Run Goal'],
+    ['POST',   '/api/agent', '{"type":"research","input":"Latest AI trends"}', 'Spawn Agent'],
+    ['GET',    '/api/memory/search?q=machine+learning&topK=3', null, 'Search Memory'],
+    ['POST',   '/api/tools/execute_code', '{"code":"console.log(2+2)"}', 'Execute Code'],
+    ['POST',   '/api/tools/web_search', '{"query":"OpenAI GPT-5","maxResults":3}', 'Web Search'],
+  ];
+  document.getElementById('quick-endpoints').innerHTML = endpoints.map(([m, path, body, label]) =>
+    `<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="fillApi('${m}','${path}',${body ? `'${body}'` : 'null'})">${m} ${label}</button>`
+  ).join('');
+}
+
+function fillApi(method, path, body) {
+  document.getElementById('api-method').value   = method;
+  document.getElementById('api-endpoint').value = path;
+  document.getElementById('api-body').value     = body ? JSON.parse('"' + body.slice(1, -1) + '"') : '';
+}
+
+async function callApi() {
+  const method   = document.getElementById('api-method').value;
+  const endpoint = document.getElementById('api-endpoint').value.trim();
+  const bodyStr  = document.getElementById('api-body').value.trim();
+
+  let body = null;
+  if (bodyStr && method !== 'GET') {
+    try { body = JSON.parse(bodyStr); } catch { toast('Invalid JSON body', 'error'); return; }
+  }
+
+  try {
+    const res = await api(method, endpoint, body);
+    document.getElementById('api-response').textContent = JSON.stringify(res, null, 2);
+    document.getElementById('api-response').className = 'result-box success';
+  } catch (e) {
+    document.getElementById('api-response').textContent = e.message;
+    document.getElementById('api-response').className = 'result-box error';
+  }
+}
+
+// ── Helpers ───────────────────────────────────────────────
+function setResult(id, text, type = 'info') {
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.className   = `result-box${type === 'success' ? ' success' : type === 'error' ? ' error' : ''}`;
+  el.style.display = 'block';
+}
+
+function fmtTime(ts) {
+  if (!ts) return '—';
+  const d = new Date(ts);
+  const now = new Date();
+  const diff = (now - d) / 1000;
+  if (diff < 60)   return `${Math.round(diff)}s ago`;
+  if (diff < 3600) return `${Math.round(diff / 60)}m ago`;
+  return d.toLocaleTimeString();
+}
+
+function toast(msg, type = 'info') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span>${type === 'success' ? '✔' : type === 'error' ? '✕' : 'ℹ'}</span> ${msg}`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+function refreshAll() {
+  loadDashboardStats();
+  if (document.getElementById('panel-agents').classList.contains('active')) loadAgents();
+  if (document.getElementById('panel-queue').classList.contains('active'))  loadQueue();
+  if (document.getElementById('panel-metrics').classList.contains('active')) loadMetrics();
+}
+
+// ── Models ────────────────────────────────────────────────
+let _modelAvailability = {};
+const MODEL_LABELS = {
+  openai:       'GPT-4o',
+  claude:       'Claude',
+  ollama:       'Ollama',
+  huggingface:  'HuggingFace',
+};
+
+async function loadModels() {
+  const res = await api('GET', '/api/models').catch(() => null);
+  if (!res?.availability) return;
+
+  _modelAvailability = res.availability;
+  const available = res.available || [];
+  const defaultModel = res.default;
+
+  // Build option HTML — show ✔/✕ + reason on unavailable ones
+  function buildOptions(selectId, includeHF = false) {
+    const sel = document.getElementById(selectId);
+    if (!sel) return;
+    const models = includeHF
+      ? ['openai', 'claude', 'ollama', 'huggingface']
+      : ['openai', 'claude', 'ollama'];
+
+    sel.innerHTML = models.map(m => {
+      const info   = res.availability[m] || {};
+      const ok     = info.available;
+      const label  = MODEL_LABELS[m];
+      const detail = ok ? (info.detail || '') : (info.reason || 'unavailable');
+      const suffix = ok ? '' : ' ✕';
+      const title  = ok ? detail : `Unavailable: ${detail}`;
+      return `<option value="${m}" ${!ok ? 'disabled' : ''} title="${title}">${label}${suffix}</option>`;
+    }).join('');
+
+    // Select default or first available
+    const preferred = available.includes(defaultModel) ? defaultModel : available[0];
+    if (preferred) sel.value = preferred;
+  }
+
+  buildOptions('quick-model',  false);
+  buildOptions('run-model',    true);
+  buildOptions('agent-model',  false);
+
+  // Update topbar model status pill
+  const modelPill = document.getElementById('s-model');
+  const modelDot  = document.getElementById('s-model-dot');
+  if (modelPill) {
+    modelPill.textContent = available.length
+      ? `${available.length} model${available.length > 1 ? 's' : ''}`
+      : '⚠ no models';
+  }
+  if (modelDot) {
+    modelDot.className = available.length ? 'dot dot-green' : 'dot dot-red';
+  }
+
+  // Show warning banner if no models
+  if (!available.length) {
+    const banner = document.createElement('div');
+    banner.style.cssText = 'background:rgba(255,71,87,.1);border:1px solid rgba(255,71,87,.3);border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--red);';
+    banner.innerHTML = `
+      <strong>⚠ No AI models available</strong><br>
+      Add at least one API key to your <code>.env</code> file:<br>
+      <code style="color:var(--yellow)">OPENAI_API_KEY=sk-...</code> or
+      <code style="color:var(--yellow)">ANTHROPIC_API_KEY=sk-ant-...</code><br>
+      Or run Ollama: <code style="color:var(--yellow)">ollama serve && ollama pull llama3.2</code>
+    `;
+    const dashPanel = document.querySelector('#panel-dashboard .scroll-area');
+    if (dashPanel && !document.getElementById('no-model-banner')) {
+      banner.id = 'no-model-banner';
+      dashPanel.insertBefore(banner, dashPanel.firstChild);
+    }
+  } else {
+    document.getElementById('no-model-banner')?.remove();
+  }
+}
+
+// ── Boot ──────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  connectWS();
+  initCharts();
+  loadDashboardStats();
+  loadKgStats();
+  loadModels();   // ← probe + populate model selectors
+
+  // Auto-refresh dashboard every 10s
+  setInterval(() => {
+    if (document.getElementById('panel-dashboard').classList.contains('active')) {
+      loadDashboardStats();
+    }
+  }, 10_000);
+});
+</script>
+</body>
+</html>

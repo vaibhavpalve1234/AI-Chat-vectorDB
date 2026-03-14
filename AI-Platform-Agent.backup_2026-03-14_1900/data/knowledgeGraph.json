@@ -1,0 +1,19 @@
+{
+  "nodes": [
+    {
+      "id": "1f4010e2-481e-433c-8735-98d568b2c6e8",
+      "type": "concept",
+      "content": "my data",
+      "properties": {},
+      "createdAt": "2026-03-14T12:11:07.404Z"
+    },
+    {
+      "id": "ea04eeb8-9ab4-4cba-8da8-636f91238b1c",
+      "type": "concept",
+      "content": "my data",
+      "properties": {},
+      "createdAt": "2026-03-14T12:11:10.671Z"
+    }
+  ],
+  "edges": []
+}
