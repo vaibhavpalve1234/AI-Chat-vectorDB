@@ -1,0 +1,32 @@
+{
+  "name": "ai-os",
+  "version": "1.0.0",
+  "description": "AI Operating System — Multi-model, multi-agent autonomous runtime",
+  "type": "module",
+  "main": "api/server.js",
+  "scripts": {
+    "start":       "node api/server.js",
+    "dev":         "node --watch api/server.js",
+    "kernel":      "node kernel/agentScheduler.js",
+    "dashboard":   "node dashboard/analytics.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk":  "^0.54.0",
+    "openai":             "^4.98.0",
+    "chromadb":           "^1.9.2",
+    "express":            "^4.19.2",
+    "ws":                 "^8.18.0",
+    "dotenv":             "^16.4.7",
+    "chalk":              "^5.3.0",
+    "ora":                "^8.0.1",
+    "boxen":              "^7.1.1",
+    "cli-table3":         "^0.6.5",
+    "p-limit":            "^5.0.0",
+    "p-retry":            "^6.2.1",
+    "uuid":               "^10.0.0",
+    "zod":                "^3.23.8",
+    "node-cron":          "^3.0.3",
+    "eventemitter3":      "^5.0.1",
+    "@tavily/core":       "^0.5.0"
+  }
+}
