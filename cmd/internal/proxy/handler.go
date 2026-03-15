@@ -1,0 +1,159 @@
+package proxy
+
+import (
+	"bufio"
+	"fmt"
+	"net"
+	"net/http"
+	"net/http/httputil"
+	"net/url"
+	"strings"
+	"time"
+
+	"github.com/kamranahmedse/slim/internal/log"
+)
+
+type pathRoute struct {
+	prefix  string
+	port    int
+	handler http.Handler
+}
+
+type domainRouter struct {
+	defaultPort    int
+	defaultHandler http.Handler
+	pathRoutes     []pathRoute // sorted by prefix length descending
+}
+
+func (dr *domainRouter) match(reqPath string) (int, http.Handler) {
+	for _, pr := range dr.pathRoutes {
+		if reqPath == pr.prefix || (strings.HasPrefix(reqPath, pr.prefix) && (pr.prefix[len(pr.prefix)-1] == '/' || (len(reqPath) > len(pr.prefix) && reqPath[len(pr.prefix)] == '/'))) {
+			return pr.port, pr.handler
+		}
+	}
+	return dr.defaultPort, dr.defaultHandler
+}
+
+func buildHandler(s *Server) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		host := normalizeHost(r.Host)
+
+		s.cfgMu.RLock()
+		router, found := s.routes[host]
+		cors := s.cfg.Cors
+		s.cfgMu.RUnlock()
+		if !found {
+			http.NotFound(w, r)
+			return
+		}
+
+		if cors {
+			if origin := r.Header.Get("Origin"); origin != "" {
+				setCORSHeaders(w, origin)
+				if r.Method == http.MethodOptions {
+					w.WriteHeader(http.StatusNoContent)
+					return
+				}
+			}
+		}
+
+		port, handler := router.match(r.URL.Path)
+		start := time.Now()
+		recorder := &statusRecorder{ResponseWriter: w, status: 200}
+		handler.ServeHTTP(recorder, r)
+
+		log.Request(host, r.Method, r.URL.RequestURI(), port, recorder.status, time.Since(start))
+	})
+}
+
+func setCORSHeaders(w http.ResponseWriter, origin string) {
+	w.Header().Set("Access-Control-Allow-Origin", origin)
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD")
+	w.Header().Set("Access-Control-Allow-Headers", "Accept, Authorization, Content-Type, X-Requested-With")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Access-Control-Max-Age", "86400")
+}
+
+func newDomainProxy(port int, transport *http.Transport, cors bool) *httputil.ReverseProxy {
+	target := &url.URL{
+		Scheme: "http",
+		Host:   fmt.Sprintf("localhost:%d", port),
+	}
+
+	proxy := &httputil.ReverseProxy{
+		Transport: transport,
+		Rewrite: func(pr *httputil.ProxyRequest) {
+			pr.SetURL(target)
+			pr.Out.Host = pr.In.Host
+		},
+		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.WriteHeader(http.StatusBadGateway)
+			_ = upstreamDownTmpl.Execute(w, upstreamDownData{
+				Host: normalizeHost(r.Host),
+				Port: port,
+			})
+		},
+	}
+
+	if cors {
+		proxy.ModifyResponse = stripCORSHeaders
+	}
+
+	return proxy
+}
+
+func stripCORSHeaders(resp *http.Response) error {
+	h := resp.Header
+	h.Del("Access-Control-Allow-Origin")
+	h.Del("Access-Control-Allow-Methods")
+	h.Del("Access-Control-Allow-Headers")
+	h.Del("Access-Control-Allow-Credentials")
+	h.Del("Access-Control-Max-Age")
+	h.Del("Access-Control-Expose-Headers")
+	return nil
+}
+
+func normalizeHost(host string) string {
+	host = strings.ToLower(strings.TrimSpace(host))
+	host = strings.TrimSuffix(host, ".")
+
+	if parsedHost, _, err := net.SplitHostPort(host); err == nil {
+		host = parsedHost
+	} else if strings.Count(host, ":") == 1 {
+		if idx := strings.LastIndex(host, ":"); idx != -1 {
+			host = host[:idx]
+		}
+	}
+
+	host = strings.Trim(host, "[]")
+	return strings.TrimSuffix(host, ".")
+}
+
+type statusRecorder struct {
+	http.ResponseWriter
+	status  int
+	written bool
+}
+
+func (r *statusRecorder) WriteHeader(code int) {
+	if !r.written {
+		r.status = code
+		r.written = true
+	}
+	r.ResponseWriter.WriteHeader(code)
+}
+
+func (r *statusRecorder) Flush() {
+	if f, ok := r.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
+}
+
+func (r *statusRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	if h, ok := r.ResponseWriter.(http.Hijacker); ok {
+		return h.Hijack()
+	}
+	return nil, nil, fmt.Errorf("upstream ResponseWriter does not support hijacking")
+}
+

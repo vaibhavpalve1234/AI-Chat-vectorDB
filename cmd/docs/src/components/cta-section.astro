@@ -1,0 +1,26 @@
+---
+import CopyButton from './copy-button.astro';
+
+const installCmd = 'curl -sL https://slim.sh/install.sh | sh';
+---
+
+<section class="relative py-14 overflow-hidden">
+  <div class="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_100%,_hsl(210_40%_14%)_0%,_transparent_60%)] pointer-events-none" aria-hidden="true"></div>
+  <div class="max-w-(--max-width) mx-auto px-(--padding-x) text-center relative">
+    <h2 class="font-heading text-[26px] font-medium tracking-[-0.02em] text-text mb-2 max-sm:text-xl">Get started in seconds</h2>
+    <p class="text-text-tertiary text-sm mb-6 leading-[1.5]">
+      Install Slim and set up your first .test domain in under a minute.
+    </p>
+    <div class="inline-flex items-center gap-3 bg-code-bg rounded-lg px-4 py-2.5 overflow-x-auto">
+      <code class="font-mono text-[12.5px] text-[#a3a3a3] whitespace-nowrap">
+        <span class="text-[#10b981] mr-1.5">$</span> <span class="text-[#7dd3fc]">curl</span> <span class="text-[#60a5fa]">-sL</span> <span class="text-[#34d399]">https://slim.sh/install.sh</span> | <span class="text-[#7dd3fc]">sh</span>
+      </code>
+      <CopyButton text={installCmd} />
+    </div>
+    <p class="text-[12.5px] text-text-tertiary mt-3">
+      <a href="https://github.com/kamranahmedse/slim" class="text-primary no-underline hover:underline underline-offset-2 transition-colors">View on GitHub</a>
+      <span class="mx-2 text-border">&middot;</span>
+      <a href="https://github.com/kamranahmedse/slim#build-from-source" class="text-text-tertiary underline underline-offset-2 transition-colors hover:text-text-secondary">Build from source</a>
+    </p>
+  </div>
+</section>

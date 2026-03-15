@@ -1,0 +1,28 @@
+version: 2
+
+builds:
+  - main: .
+    binary: slim
+    ldflags:
+      - -s -w -X github.com/kamranahmedse/slim/cmd.Version={{.Version}}
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - format: tar.gz
+    name_template: "slim_{{.Version}}_{{.Os}}_{{.Arch}}"
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+
+release:
+  github:
+    owner: kamranahmedse
+    name: slim

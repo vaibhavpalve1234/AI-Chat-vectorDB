@@ -1,0 +1,17 @@
+BINARY := slim
+VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+
+.PHONY: build install clean test
+
+build:
+	go build -ldflags "-s -w -X github.com/kamranahmedse/slim/cmd.Version=$(VERSION)" -o $(BINARY) .
+	cp install.sh docs/public/install.sh
+
+install: build
+	mv $(BINARY) /usr/local/bin/
+
+clean:
+	rm -f $(BINARY)
+
+test:
+	go test ./...

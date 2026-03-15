@@ -1,0 +1,80 @@
+---
+import FeatureRow from './feature-row.astro';
+import HowStep from './how-step.astro';
+import ShieldCheck from '../icons/shield-check.astro';
+import Bolt from '../icons/bolt.astro';
+import Globe from '../icons/globe.astro';
+import FileText from '../icons/file-text.astro';
+import Activity from '../icons/activity.astro';
+import TerminalPrompt from '../icons/terminal-prompt.astro';
+import Route from '../icons/route.astro';
+import Folder from '../icons/folder.astro';
+---
+
+<section class="py-11" id="highlights">
+  <div class="max-w-[var(--max-width)] mx-auto px-[var(--padding-x)]">
+    <p class="text-[11px] font-semibold uppercase tracking-[0.1em] text-primary mb-3">Highlights</p>
+    <h2 class="font-heading text-[22px] font-medium tracking-[-0.02em] mb-1.5 text-text max-sm:text-xl">Features</h2>
+    <p class="text-text-tertiary text-sm mb-5 leading-[1.5]">
+      Everything you need for local development, built into a single binary.
+    </p>
+    <div class="grid grid-cols-2 gap-3 max-sm:grid-cols-1">
+      <FeatureRow title="Automatic HTTPS" description="Trusted certificates, green lock, no warnings." tint="#232323">
+        <ShieldCheck />
+      </FeatureRow>
+      <FeatureRow title="WebSocket & HMR" description="Next.js, Vite, and others work out of the box." tint="#232323">
+        <Bolt />
+      </FeatureRow>
+      <FeatureRow title="Custom TLDs" description="Use .test, .loc, .dev, or any TLD you want." tint="#232323">
+        <Globe />
+      </FeatureRow>
+      <FeatureRow title="Access Logging" description="Full, minimal, or off. Tail and filter by domain." tint="#232323">
+        <FileText />
+      </FeatureRow>
+      <FeatureRow title="Health Monitoring" description="See which upstreams are reachable at a glance." tint="#232323">
+        <Activity />
+      </FeatureRow>
+      <FeatureRow title="Path Routing" description="Route different URL paths to different upstream ports." tint="#232323">
+        <Route />
+      </FeatureRow>
+      <FeatureRow title="Project Config" description="Share your dev setup with teammates via .slim.yaml." tint="#232323">
+        <Folder />
+      </FeatureRow>
+      <FeatureRow title="Zero Config" description="First run handles CA, trust, and port forwarding." tint="#232323">
+        <TerminalPrompt />
+      </FeatureRow>
+    </div>
+  </div>
+</section>
+
+<section class="py-11">
+  <div class="max-w-[var(--max-width)] mx-auto px-[var(--padding-x)]">
+    <p class="text-[11px] font-semibold uppercase tracking-[0.1em] text-primary mb-3">Under the Hood</p>
+    <h2 class="font-heading text-[22px] font-medium tracking-[-0.02em] mb-1.5 text-text max-sm:text-xl">How it works</h2>
+    <p class="text-text-tertiary text-sm mb-4 leading-[1.5]">
+      A single Go binary that handles everything under the hood.
+    </p>
+    <div class="flex flex-col">
+      <HowStep number="1">
+        <strong class="text-[13.5px] font-semibold text-text">Creates a local development CA</strong>
+        <span class="text-[13.5px] text-text-tertiary ml-0.5 max-sm:block max-sm:ml-0 max-sm:mt-0.5">so your local domains work over HTTPS without browser warnings.</span>
+      </HowStep>
+      <HowStep number="2">
+        <strong class="text-[13.5px] font-semibold text-text">Issues per-domain certificates</strong>
+        <span class="text-[13.5px] text-text-tertiary ml-0.5 max-sm:block max-sm:ml-0 max-sm:mt-0.5">on the fly, signed by that CA for each mapped domain.</span>
+      </HowStep>
+      <HowStep number="3">
+        <strong class="text-[13.5px] font-semibold text-text">Updates <code class="bg-[hsl(0_0%_100%/8%)] px-[5px] py-px rounded-[3px] text-xs font-medium">/etc/hosts</code></strong>
+        <span class="text-[13.5px] text-text-tertiary ml-0.5 max-sm:block max-sm:ml-0 max-sm:mt-0.5">automatically, pointing your domains to <code class="bg-[hsl(0_0%_100%/8%)] px-[5px] py-px rounded-[3px] text-xs">127.0.0.1</code>.</span>
+      </HowStep>
+      <HowStep number="4">
+        <strong class="text-[13.5px] font-semibold text-text">Forwards ports 80/443</strong>
+        <span class="text-[13.5px] text-text-tertiary ml-0.5 max-sm:block max-sm:ml-0 max-sm:mt-0.5">so the proxy listens on standard ports without needing root.</span>
+      </HowStep>
+      <HowStep number="5">
+        <strong class="text-[13.5px] font-semibold text-text">Reverse proxies requests</strong>
+        <span class="text-[13.5px] text-text-tertiary ml-0.5 max-sm:block max-sm:ml-0 max-sm:mt-0.5">with HTTP/2, WebSocket upgrades, and CORS headers.</span>
+      </HowStep>
+    </div>
+  </div>
+</section>

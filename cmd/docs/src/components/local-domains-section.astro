@@ -1,0 +1,134 @@
+---
+import CommandCode from './command-code.astro';
+
+const yamlExample = `services:
+  - domain: myapp
+    port: 3000
+    routes:
+      - path: /api
+        port: 8080
+  - domain: dashboard
+    port: 5173
+  - domain: app.loc
+    port: 4000
+log_mode: minimal`;
+
+const upDownCode = `# Start all services defined in .slim.yaml
+$ slim up
+
+# Stop all project services
+$ slim down`;
+---
+
+<section class="py-11" id="local-domains">
+  <div class="max-w-[var(--max-width)] mx-auto px-[var(--padding-x)]">
+    <p class="text-[11px] font-semibold uppercase tracking-[0.1em] text-primary mb-3">Local Development</p>
+    <h2 class="font-heading text-[22px] font-medium tracking-[-0.02em] mb-1.5 text-text max-sm:text-xl">Local Domains with HTTPS</h2>
+    <p class="text-text-tertiary text-sm mb-5 leading-[1.5]">
+      Map localhost ports to pretty <code class="bg-[hsl(0_0%_100%/8%)] px-[5px] py-px rounded-[3px] text-[12.5px] text-text-secondary">.test</code> domains or any custom TLD with trusted certificates and zero config.
+    </p>
+
+    <div class="flex gap-0 border-b border-border mb-0">
+      <button
+        class="local-tab px-4 py-2 text-[13px] font-medium transition-colors border-b-2 border-text text-text"
+        data-local-tab="without-config"
+        type="button"
+      >Without Config</button>
+      <button
+        class="local-tab px-4 py-2 text-[13px] font-medium transition-colors border-b-2 border-transparent text-text-tertiary hover:text-text-secondary"
+        data-local-tab="with-config"
+        type="button"
+      >With Config</button>
+    </div>
+
+    <div class="local-panel pt-5" data-local-panel="without-config">
+      <div class="flex flex-col gap-5">
+        <div>
+          <p class="text-[13.5px] font-medium text-text mb-2">Map your application</p>
+          <div class="rounded-[10px] bg-code-bg text-left overflow-hidden">
+            <div class="px-4 pt-3 pb-3.5 font-mono text-[13px] leading-[1.7] text-code-text max-sm:text-[11.5px]">
+              <div class="flex gap-2">
+                <span class="text-[#10b981] select-none">$</span>
+                <span><span class="text-[#7dd3fc]">slim</span> start web <span class="text-[#60a5fa]">--port</span> <span class="text-[#fbbf24]">3000</span></span>
+              </div>
+              <div class="pl-4 whitespace-nowrap">
+                <span class="text-[#34d399]">&#10003;</span> <span class="text-[#34d399] font-medium">https://web.test</span> <span class="text-[#525252]">&rarr;</span> <span class="text-[#737373]">localhost:3000</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <p class="text-[13.5px] font-medium text-text mb-2">Route /api to a different port</p>
+          <div class="rounded-[10px] bg-code-bg text-left overflow-hidden">
+            <div class="px-4 pt-3 pb-3.5 font-mono text-[13px] leading-[1.7] text-code-text max-sm:text-[11.5px]">
+              <div class="flex gap-2">
+                <span class="text-[#10b981] select-none">$</span>
+                <span><span class="text-[#7dd3fc]">slim</span> start myapp <span class="text-[#60a5fa]">--port</span> <span class="text-[#fbbf24]">3000</span> <span class="text-[#60a5fa]">--route</span> <span class="text-[#fbbf24]">/api=8080</span></span>
+              </div>
+              <div class="pl-4 whitespace-nowrap">
+                <span class="text-[#34d399]">&#10003;</span> <span class="text-[#34d399] font-medium">https://myapp.test</span> &nbsp;&nbsp;&nbsp;<span class="text-[#525252]">&rarr;</span> <span class="text-[#737373]">localhost:3000</span>
+              </div>
+              <div class="pl-4 whitespace-nowrap">
+                <span class="text-[#737373]">&nbsp;</span> <span class="text-[#fbbf24]">https://myapp.test/api</span> <span class="text-[#525252]">&rarr;</span> <span class="text-[#737373]">localhost:8080</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <p class="text-[13.5px] font-medium text-text mb-2">Use any TLD</p>
+          <div class="rounded-[10px] bg-code-bg text-left overflow-hidden">
+            <div class="px-4 pt-3 pb-3.5 font-mono text-[13px] leading-[1.7] text-code-text max-sm:text-[11.5px]">
+              <div class="flex gap-2">
+                <span class="text-[#10b981] select-none">$</span>
+                <span><span class="text-[#7dd3fc]">slim</span> start app.loc <span class="text-[#60a5fa]">--port</span> <span class="text-[#fbbf24]">4000</span></span>
+              </div>
+              <div class="pl-4 whitespace-nowrap">
+                <span class="text-[#34d399]">&#10003;</span> <span class="text-[#34d399] font-medium">https://app.loc</span> <span class="text-[#525252]">&rarr;</span> <span class="text-[#737373]">localhost:4000</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="local-panel hidden pt-5" data-local-panel="with-config">
+      <p class="text-text-tertiary text-sm mb-4 leading-[1.5]">
+        Share your local dev setup with teammates using a <code class="bg-[hsl(0_0%_100%/8%)] px-[5px] py-px rounded-[3px] text-[12.5px] text-text-secondary">.slim.yaml</code> file.
+      </p>
+      <div class="rounded-lg border border-border overflow-hidden">
+        <CommandCode code={yamlExample} />
+      </div>
+      <p class="text-text-tertiary text-sm mt-4 leading-[1.5]">
+        Run <code class="bg-[hsl(0_0%_100%/8%)] px-[5px] py-px rounded-[3px] text-[12.5px] text-text-secondary">slim up</code> to start every service in one shot, and <code class="bg-[hsl(0_0%_100%/8%)] px-[5px] py-px rounded-[3px] text-[12.5px] text-text-secondary">slim down</code> to tear them all down.
+      </p>
+      <div class="rounded-lg border border-border overflow-hidden mt-4">
+        <CommandCode code={upDownCode} />
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  document.querySelectorAll('.local-tab').forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      var target = tab.getAttribute('data-local-tab');
+
+      document.querySelectorAll('.local-tab').forEach(function (t) {
+        t.classList.remove('border-text', 'text-text');
+        t.classList.add('border-transparent', 'text-text-tertiary');
+      });
+      tab.classList.remove('border-transparent', 'text-text-tertiary');
+      tab.classList.add('border-text', 'text-text');
+
+      document.querySelectorAll('.local-panel').forEach(function (p) {
+        p.classList.add('hidden');
+      });
+      var panel = document.querySelector('.local-panel[data-local-panel="' + target + '"]');
+      if (panel) {
+        panel.classList.remove('hidden');
+      }
+    });
+  });
+</script>

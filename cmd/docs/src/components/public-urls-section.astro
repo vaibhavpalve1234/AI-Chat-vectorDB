@@ -1,0 +1,68 @@
+---
+import FeatureRow from './feature-row.astro';
+import Globe from '../icons/globe.astro';
+import ShieldCheck from '../icons/shield-check.astro';
+import Clock from '../icons/clock.astro';
+import Activity from '../icons/activity.astro';
+---
+
+<section class="py-11" id="sharing">
+  <div class="max-w-[var(--max-width)] mx-auto px-[var(--padding-x)]">
+    <p class="text-[11px] font-semibold uppercase tracking-[0.1em] text-primary mb-3">Sharing</p>
+    <h2 class="font-heading text-[22px] font-medium tracking-[-0.02em] mb-1.5 text-text max-sm:text-xl">Internet Sharing</h2>
+    <p class="text-text-tertiary text-sm mb-5 leading-[1.5]">
+      Give your local server a public URL with one command. Custom subdomains, password protection, and auto-expiry built in.
+    </p>
+
+    <div class="rounded-[10px] bg-code-bg text-left overflow-hidden">
+      <div class="flex gap-1.5 border-b border-[#1a1a1a] px-3.5 py-2.5">
+        <span class="size-2.5 rounded-full bg-[#ff5f57]"></span>
+        <span class="size-2.5 rounded-full bg-[#febc2e]"></span>
+        <span class="size-2.5 rounded-full bg-[#28c840]"></span>
+      </div>
+      <div class="px-4 pt-3 pb-3.5 font-mono text-[13px] leading-[1.7] text-code-text max-sm:text-[11.5px]">
+        <div class="flex gap-2">
+          <span class="text-[#10b981] select-none">$</span>
+          <span><span class="text-[#7dd3fc]">slim</span> login</span>
+        </div>
+        <div class="pl-4 whitespace-nowrap">
+          <span class="text-[#34d399]">&#10003;</span> <span class="text-[#737373]">Authenticated</span>
+        </div>
+
+        <div class="flex gap-2 mt-3">
+          <span class="text-[#10b981] select-none">$</span>
+          <span><span class="text-[#7dd3fc]">slim</span> share <span class="text-[#60a5fa]">--port</span> <span class="text-[#fbbf24]">3000</span> <span class="text-[#60a5fa]">--subdomain</span> <span class="text-[#fbbf24]">demo</span></span>
+        </div>
+        <div class="pl-4 whitespace-nowrap">
+          <span class="text-[#34d399]">&#10003;</span> <span class="text-[#34d399] font-medium">https://demo.slim.show</span> <span class="text-[#525252]">&rarr;</span> <span class="text-[#737373]">localhost:3000</span>
+        </div>
+
+        <div class="flex gap-2 mt-3">
+          <span class="text-[#10b981] select-none">$</span>
+          <span><span class="text-[#7dd3fc]">slim</span> share <span class="text-[#60a5fa]">--port</span> <span class="text-[#fbbf24]">8080</span> <span class="text-[#60a5fa]">--password</span> <span class="text-[#60a5fa]">--ttl</span> <span class="text-[#fbbf24]">30m</span></span>
+        </div>
+        <div class="pl-4 whitespace-nowrap">
+          <span class="text-[#34d399]">&#10003;</span> <span class="text-[#34d399] font-medium">https://a1b2c3.slim.show</span> <span class="text-[#525252]">&rarr;</span> <span class="text-[#737373]">localhost:8080</span>
+        </div>
+        <div class="pl-4 whitespace-nowrap">
+          <span class="text-[#737373]">&nbsp;</span> <span class="text-[#60a5fa]">password protected</span> <span class="text-[#525252]">&middot;</span> <span class="text-[#fbbf24]">expires in 30m</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3 mt-5 max-sm:grid-cols-1">
+      <FeatureRow title="Vanity Subdomains" description="Choose your own subdomain on slim.show." tint="#232323">
+        <Globe />
+      </FeatureRow>
+      <FeatureRow title="Password Protected" description="Add authentication to your public URL." tint="#232323">
+        <ShieldCheck />
+      </FeatureRow>
+      <FeatureRow title="Auto-Expiring" description="Set a TTL so tunnels close automatically." tint="#232323">
+        <Clock />
+      </FeatureRow>
+      <FeatureRow title="Live Request Logs" description="Watch requests flow through in real-time." tint="#232323">
+        <Activity />
+      </FeatureRow>
+    </div>
+  </div>
+</section>

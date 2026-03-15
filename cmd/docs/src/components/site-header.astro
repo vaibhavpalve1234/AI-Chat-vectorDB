@@ -1,0 +1,31 @@
+---
+import GitHubIcon from '../icons/github.astro';
+
+const loginUrl = import.meta.env.DEV ? 'http://localhost:5173' : 'https://app.slim.sh';
+---
+
+<header class="sticky top-0 z-[100] bg-[#1a1a1a]/90 backdrop-blur-[12px] border-b border-border py-3">
+  <div class="max-w-(--max-width) mx-auto px-(--padding-x) flex items-center justify-between">
+    <a href="/" class="font-body text-lg font-semibold text-text no-underline inline-flex items-center gap-[5px] hover:no-underline">Slim</a>
+    <nav class="flex items-center gap-5">
+      <a href="#highlights" class="text-[13px] text-text-tertiary no-underline transition-colors hover:text-text hover:no-underline max-sm:hidden">Features</a>
+      <a href="#commands" class="text-[13px] text-text-tertiary no-underline transition-colors hover:text-text hover:no-underline max-sm:hidden">Commands</a>
+      <a href="#install" class="text-[13px] text-text-tertiary no-underline transition-colors hover:text-text hover:no-underline max-sm:hidden">Install</a>
+      <a
+        href="https://github.com/kamranahmedse/slim"
+        class="inline-flex items-center gap-1 text-text-tertiary transition-colors hover:text-text hover:no-underline"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="GitHub"
+      >
+        <GitHubIcon />
+      </a>
+      <a
+        href={loginUrl}
+        class="text-[13px] font-medium text-text-secondary no-underline bg-surface rounded-md px-3 py-1 transition-colors hover:text-text hover:no-underline"
+      >
+        Login
+      </a>
+    </nav>
+  </div>
+</header>

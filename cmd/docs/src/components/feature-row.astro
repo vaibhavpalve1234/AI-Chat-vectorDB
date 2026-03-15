@@ -1,0 +1,12 @@
+---
+const props = Astro.props;
+const { title, description, tint = '#232323' } = props;
+---
+
+<div class="rounded-xl p-4 border border-border transition-shadow hover:shadow-[0_2px_8px_rgba(0,0,0,0.2)]" style={`background: ${tint}`}>
+  <div class="mb-4 [&>svg]:size-5">
+    <slot />
+  </div>
+  <strong class="text-[13.5px] font-semibold text-text block">{title}</strong>
+  <p class="text-[13px] text-text-tertiary mt-1 leading-[1.45]">{description}</p>
+</div>

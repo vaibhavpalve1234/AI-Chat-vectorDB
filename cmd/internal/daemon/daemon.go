@@ -1,0 +1,205 @@
+package daemon
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"os"
+	"os/signal"
+	"strconv"
+	"strings"
+	"sync"
+	"syscall"
+	"time"
+
+	godaemon "github.com/sevlyar/go-daemon"
+
+	"github.com/kamranahmedse/slim/internal/config"
+	"github.com/kamranahmedse/slim/internal/log"
+	"github.com/kamranahmedse/slim/internal/proxy"
+)
+
+func IsChild() bool {
+	return godaemon.WasReborn()
+}
+
+func IsRunning() bool {
+	_, err := os.Stat(config.SocketPath())
+	if err != nil {
+		return false
+	}
+
+	resp, err := SendIPC(Request{Type: MsgStatus})
+	if err != nil {
+		return false
+	}
+	return resp.OK
+}
+
+func RunDetached() error {
+	if err := os.MkdirAll(config.Dir(), 0755); err != nil {
+		return err
+	}
+
+	daemonCtx := &godaemon.Context{
+		PidFileName: "",
+		PidFilePerm: 0644,
+		LogFileName: "",
+		WorkDir:     "./",
+		Umask:       027,
+	}
+
+	child, err := daemonCtx.Reborn()
+	if err != nil {
+		return fmt.Errorf("daemonize: %w", err)
+	}
+
+	if child != nil {
+		return nil
+	}
+
+	defer func() { _ = daemonCtx.Release() }()
+	if err := run(); err != nil {
+		errPath := config.Dir() + "/daemon.err"
+		_ = os.WriteFile(errPath, []byte(err.Error()+"\n"), 0644)
+		os.Exit(1)
+	}
+	return nil
+}
+
+func WaitForDaemon() error {
+	errPath := config.Dir() + "/daemon.err"
+	_ = os.Truncate(errPath, 0)
+
+	for i := 0; i < 50; i++ {
+		if IsRunning() {
+			return nil
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	if data, err := os.ReadFile(errPath); err == nil && len(data) > 0 {
+		return fmt.Errorf("daemon failed to start: %s", strings.TrimSpace(string(data)))
+	}
+	return fmt.Errorf("daemon failed to start within 5 seconds")
+}
+
+func run() error {
+	cfg, err := config.Load()
+	if err != nil {
+		return err
+	}
+
+	if err := log.SetOutput(config.LogPath(), cfg.EffectiveLogMode()); err != nil {
+		return fmt.Errorf("opening log file: %w", err)
+	}
+	defer log.Close()
+
+	srv := proxy.NewServer(cfg)
+
+	ipc, err := NewIPCServer(func(req Request) Response {
+		return handleIPC(req, srv)
+	})
+	if err != nil {
+		return err
+	}
+	go ipc.Serve()
+
+	if err := os.WriteFile(config.PidPath(), []byte(strconv.Itoa(os.Getpid())), 0644); err != nil {
+		return fmt.Errorf("writing pid file: %w", err)
+	}
+
+	var cleanupOnce sync.Once
+	cleanup := func() {
+		cleanupOnce.Do(func() {
+			ipc.Close()
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			_ = srv.Shutdown(ctx)
+			_ = os.Remove(config.PidPath())
+		})
+	}
+	defer cleanup()
+
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	defer signal.Stop(sigCh)
+
+	go func() {
+		<-sigCh
+		cleanup()
+	}()
+
+	return srv.Start()
+}
+
+func handleIPC(req Request, srv *proxy.Server) Response {
+	switch req.Type {
+	case MsgShutdown:
+		go func() {
+			p, _ := os.FindProcess(os.Getpid())
+			_ = p.Signal(syscall.SIGTERM)
+		}()
+		return Response{OK: true}
+
+	case MsgStatus:
+		return handleStatus()
+
+	case MsgReload:
+		return handleReload(srv)
+
+	default:
+		return Response{OK: false, Error: fmt.Sprintf("unknown message type: %s", req.Type)}
+	}
+}
+
+func handleStatus() Response {
+	cfg, err := config.Load()
+	if err != nil {
+		return Response{OK: false, Error: err.Error()}
+	}
+
+	var allPorts []int
+	domains := make([]DomainInfo, len(cfg.Domains))
+	for i, d := range cfg.Domains {
+		domains[i] = DomainInfo{Name: d.Name, Port: d.Port}
+		allPorts = append(allPorts, d.Port)
+		for _, r := range d.Routes {
+			domains[i].Routes = append(domains[i].Routes, RouteInfo{Path: r.Path, Port: r.Port})
+			allPorts = append(allPorts, r.Port)
+		}
+	}
+
+	health := proxy.CheckUpstreams(allPorts)
+	idx := 0
+	for i := range domains {
+		domains[i].Healthy = health[idx]
+		idx++
+		for j := range domains[i].Routes {
+			domains[i].Routes[j].Healthy = health[idx]
+			idx++
+		}
+	}
+
+	status := StatusData{
+		Running: true,
+		PID:     os.Getpid(),
+		Domains: domains,
+	}
+	data, err := json.Marshal(status)
+	if err != nil {
+		return Response{OK: false, Error: err.Error()}
+	}
+	return Response{OK: true, Data: data}
+}
+
+func handleReload(srv *proxy.Server) Response {
+	cfg, err := srv.ReloadConfig()
+	if err != nil {
+		return Response{OK: false, Error: err.Error()}
+	}
+	if err := log.SetOutput(config.LogPath(), cfg.EffectiveLogMode()); err != nil {
+		return Response{OK: false, Error: err.Error()}
+	}
+	return Response{OK: true}
+}
