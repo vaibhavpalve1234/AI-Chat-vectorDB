@@ -70,9 +70,10 @@ Other domains not in the project config are left running.
 			return err
 		}
 
+		hostsPath := system.HostsPath()
 		for _, svc := range pc.Services {
 			if err := downRemoveHostFn(svc.Domain); err != nil {
-				fmt.Printf("Warning: failed to remove %s from /etc/hosts: %v\n", svc.Domain, err)
+				fmt.Printf("Warning: failed to remove %s from %s: %v\n", svc.Domain, hostsPath, err)
 			}
 		}
 

@@ -77,7 +77,7 @@ Runs first-time setup automatically if needed.
 		}
 
 		if err := system.AddHost(name); err != nil {
-			return fmt.Errorf("updating /etc/hosts: %w", err)
+			return fmt.Errorf("updating hosts file: %w", err)
 		}
 
 		if err := cert.EnsureLeafCert(name); err != nil {

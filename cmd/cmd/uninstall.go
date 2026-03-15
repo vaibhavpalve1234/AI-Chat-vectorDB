@@ -65,7 +65,7 @@ var uninstallCmd = &cobra.Command{
 				},
 			},
 			{
-				Name: "Cleaning /etc/hosts",
+				Name: fmt.Sprintf("Cleaning %s", system.HostsPath()),
 				Run: func() (string, error) {
 					if err := system.RemoveAllHosts(); err != nil {
 						return fmt.Sprintf("skipped (%v)", err), nil

@@ -31,9 +31,13 @@ func TunnelServerURL() string {
 var baseDir string
 
 func Init() error {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return fmt.Errorf("cannot determine home directory: %w", err)
+	home := os.Getenv("HOME")
+	if home == "" {
+		var err error
+		home, err = os.UserHomeDir()
+		if err != nil {
+			return fmt.Errorf("cannot determine home directory: %w", err)
+		}
 	}
 	baseDir = filepath.Join(home, ".slim")
 	return nil

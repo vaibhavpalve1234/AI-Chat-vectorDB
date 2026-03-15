@@ -56,7 +56,7 @@ func stopOne(name string) error {
 	}
 
 	if err := systemRemoveHostFn(name); err != nil {
-		return fmt.Errorf("updating /etc/hosts: %w", err)
+		return fmt.Errorf("updating hosts file: %w", err)
 	}
 
 	if daemonIsRunningFn() {
@@ -101,9 +101,10 @@ func stopAll() error {
 		return nil
 	}
 
+	hostsPath := system.HostsPath()
 	for _, d := range domains {
 		if err := systemRemoveHostFn(d.Name); err != nil {
-			fmt.Printf("Warning: failed to remove %s from /etc/hosts: %v\n", d.Name, err)
+			fmt.Printf("Warning: failed to remove %s from %s: %v\n", d.Name, hostsPath, err)
 		}
 	}
 

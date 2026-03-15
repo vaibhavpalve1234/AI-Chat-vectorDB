@@ -93,7 +93,7 @@ then start all services defined in it.
 
 		for _, svc := range pc.Services {
 			if err := upAddHostFn(svc.Domain); err != nil {
-				return fmt.Errorf("updating /etc/hosts for %s: %w", svc.Domain, err)
+				return fmt.Errorf("updating hosts file for %s: %w", svc.Domain, err)
 			}
 			if err := upEnsureLeafCertFn(svc.Domain); err != nil {
 				return fmt.Errorf("generating certificate for %s: %w", svc.Domain, err)

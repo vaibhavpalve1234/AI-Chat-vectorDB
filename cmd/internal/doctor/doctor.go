@@ -142,15 +142,16 @@ func missingIngressPorts() []string {
 func checkHostsFile(domain string) CheckResult {
 	name := "Hosts: " + domain
 
-	content, err := readFileFn("/etc/hosts")
+	hostsPath := system.HostsPath()
+	content, err := readFileFn(hostsPath)
 	if err != nil {
-		return CheckResult{Name: name, Status: Fail, Message: "cannot read /etc/hosts"}
+		return CheckResult{Name: name, Status: Fail, Message: fmt.Sprintf("cannot read %s", hostsPath)}
 	}
 
 	if system.HasMarkedEntry(string(content), domain) {
-		return CheckResult{Name: name, Status: Pass, Message: "present in /etc/hosts"}
+		return CheckResult{Name: name, Status: Pass, Message: fmt.Sprintf("present in %s", hostsPath)}
 	}
-	return CheckResult{Name: name, Status: Fail, Message: "missing from /etc/hosts"}
+	return CheckResult{Name: name, Status: Fail, Message: fmt.Sprintf("missing from %s", hostsPath)}
 }
 
 func checkDaemon() CheckResult {

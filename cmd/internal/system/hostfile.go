@@ -3,11 +3,30 @@ package system
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 )
 
-const hostsPath = "/etc/hosts"
+var hostsPath = defaultHostsPath()
+
 const marker = "# slim"
+
+func defaultHostsPath() string {
+	if runtime.GOOS == "windows" {
+		systemRoot := os.Getenv("SystemRoot")
+		if systemRoot == "" {
+			systemRoot = "C:\\Windows"
+		}
+		return filepath.Join(systemRoot, "System32", "drivers", "etc", "hosts")
+	}
+	return "/etc/hosts"
+}
+
+// HostsPath returns the host file path used by this OS.
+func HostsPath() string {
+	return hostsPath
+}
 
 var (
 	readFileHostFn          = os.ReadFile
