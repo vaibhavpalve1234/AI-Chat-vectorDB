@@ -16,14 +16,14 @@ export const Config = {
     default:        process.env.DEFAULT_MODEL     || 'openai',
     // Provider used for embeddings stored in vector DB (defaults to OpenAI).
     embeddingsProvider: process.env.EMBEDDINGS_PROVIDER || 'openai',
-    openai:         process.env.OPENAI_MODEL      || 'gpt-4o',
+    openai:         process.env.OPENAI_MODEL      || 'openai/gpt-oss-120b',
     claude:         process.env.CLAUDE_MODEL      || 'claude-sonnet-4-6',
     ollama:         process.env.OLLAMA_MODEL      || 'llama3',
     ollamaEmbed:    process.env.OLLAMA_EMBED_MODEL || '',
     ollamaUrl:      process.env.OLLAMA_URL        || 'http://localhost:11434',
     huggingfaceUrl: process.env.HF_INFERENCE_URL  || 'https://api-inference.huggingface.co',
-    maxTokens:      parseInt(process.env.MAX_TOKENS) || 2000,
-    temperature:    parseFloat(process.env.TEMPERATURE) || 0.7,
+    maxTokens:      parseInt(process.env.MAX_TOKENS) || 4096,
+    temperature:    parseFloat(process.env.TEMPERATURE) || 1,
   },
 
   // Memory

@@ -5,7 +5,7 @@
   "type": "module",
   "main": "api/server.js",
   "scripts": {
-    "start": "nodemon api/server.js",
+    "start": "concurrently \"chroma run --host localhost --port 8000\" \"nodemon api/server.js\"",
     "dev": "node --watch api/server.js",
     "kernel": "node kernel/agentScheduler.js",
     "dashboard": "node dashboard/analytics.js"
@@ -17,6 +17,7 @@
     "chalk": "^5.3.0",
     "chromadb": "^1.9.2",
     "cli-table3": "^0.6.5",
+    "concurrently": "^9.2.1",
     "dotenv": "^16.4.7",
     "eventemitter3": "^5.0.1",
     "express": "^4.19.2",

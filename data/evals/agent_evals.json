@@ -1,0 +1,91 @@
+[
+  {
+    "agentId": "efd62436-4e6f-4bd3-b820-c8bfa33a197f",
+    "type": "evaluation",
+    "question": "UtilityDemo.java",
+    "response": "UtilityDemo.java",
+    "scores": {
+      "accuracy": {
+        "score": 2,
+        "reason": "The response merely repeats the term \"UtilityDemo.java\" without providing any relevant information or answering a specific question."
+      },
+      "completeness": {
+        "score": 1,
+        "reason": "No details, explanation, code, or context are given; the response is incomplete."
+      },
+      "helpfulness": {
+        "score": 1,
+        "reason": "The reply offers no useful guidance, clarification, or assistance to the user."
+      },
+      "reasoning": {
+        "score": 0,
+        "reason": "There is no reasoning or justification presented."
+      },
+      "conciseness": {
+        "score": 3,
+        "reason": "While the answer is brief, the brevity comes at the expense of any substantive content."
+      },
+      "groundedness": {
+        "score": 1,
+        "reason": "The response is not grounded in any evidence, explanation, or source material."
+      },
+      "strengths": [
+        "Extremely short; no extraneous filler."
+      ],
+      "weaknesses": [
+        "Fails to address the likely intent of the question.",
+        "Provides no information, explanation, or context.",
+        "Lacks reasoning, evidence, or any helpful content."
+      ]
+    },
+    "weightedScore": 1.3,
+    "grade": "F",
+    "durationMs": 6544,
+    "timestamp": "2026-03-15T04:41:46.939Z"
+  },
+  {
+    "agentId": "c8f04cbd-5266-449b-b44d-d7adebf19f15",
+    "type": "evaluation",
+    "response": "undefined",
+    "scores": {
+      "accuracy": {
+        "score": 0,
+        "reason": "The response does not provide any correct or relevant answer to the (undefined) question."
+      },
+      "completeness": {
+        "score": 0,
+        "reason": "No information or elaboration is given; the response is entirely empty of content."
+      },
+      "helpfulness": {
+        "score": 0,
+        "reason": "The reply offers no assistance, guidance, or value to the user."
+      },
+      "reasoning": {
+        "score": 0,
+        "reason": "There is no logical reasoning or explanation presented."
+      },
+      "conciseness": {
+        "score": 2,
+        "reason": "While the response is extremely brief, brevity is not beneficial here because it fails to address the query."
+      },
+      "groundedness": {
+        "score": 0,
+        "reason": "The answer is not based on any factual information or source."
+      },
+      "strengths": [
+        "Extremely short, no extraneous text."
+      ],
+      "weaknesses": [
+        "Fails to answer the question.",
+        "Provides no useful information.",
+        "Lacks any reasoning or explanation.",
+        "Not grounded in any knowledge.",
+        "Overall unhelpful to the user."
+      ]
+    },
+    "weightedScore": 0.2,
+    "grade": "F",
+    "durationMs": 5209,
+    "timestamp": "2026-03-15T04:39:57.119Z"
+  }
+]

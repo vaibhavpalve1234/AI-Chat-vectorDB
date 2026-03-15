@@ -135,7 +135,13 @@ Run:
 
 ```bash
 chroma run --path ./data/chromadb
+
+chroma run --host localhost --port 8000
 ```
+need to be install::
+ollama pull llama3
+ollama pull mistral
+ollama pull phi3
 
 Quick check:
 
